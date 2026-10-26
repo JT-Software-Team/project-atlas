@@ -27,7 +27,12 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
   } catch {
     throw new ApiError(0, 'Unable to reach the Project Atlas server. Check your connection and try again.');
   }
-  const data = res.headers.get('content-type')?.includes('application/json') ? await res.json().catch(() => ({})) : {};
+  const isJson = res.headers.get('content-type')?.includes('application/json');
+  if (!isJson) {
+    if (res.status === 401 && !url.startsWith('/auth/')) unauthorizedListeners.forEach((fn) => fn());
+    throw new ApiError(res.status || 502, `Server returned an invalid response (${res.status}).`);
+  }
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401 && !url.startsWith('/auth/')) unauthorizedListeners.forEach((fn) => fn());
     const fields: Record<string, string> | undefined = data.fields

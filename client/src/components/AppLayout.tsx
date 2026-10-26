@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell, Building2, ChevronsLeft, ChevronsRight, FileText, FolderKanban, History, LayoutGrid, LogOut, Menu,
   Search, Settings, Shapes, Star, UserCog, Users, UserCircle, Wrench, X,
@@ -68,8 +68,9 @@ export function AppLayout() {
     navigate(`/projects${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ''}`);
   };
 
+  if (!user) return <Navigate to="/login" replace />;
   const notes = notifications.data?.notifications ?? [];
-  const role = user!.role;
+  const role = user.role;
 
   return (
     <div className={`shell ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>

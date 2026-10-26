@@ -18,13 +18,15 @@ import { ProjectAdminPage } from './pages/admin/ProjectAdminPage';
 import { ProjectFormPage } from './pages/admin/ProjectFormPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
 import { UsersPage } from './pages/admin/UsersPage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export function App() {
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        <AuthProvider>
-          <Routes>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ToastProvider>
+          <AuthProvider>
+            <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -50,5 +52,6 @@ export function App() {
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>
+  </ErrorBoundary>
   );
 }
