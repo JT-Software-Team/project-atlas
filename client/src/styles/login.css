@@ -1,0 +1,25 @@
+.auth-page { position: relative; z-index: 1; min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(420px, 0.9fr); }
+.auth-visual { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 48px; border-right: 1px solid var(--border); background: var(--bg-2); }
+.auth-visual-content { position: relative; max-width: 520px; }
+.auth-visual h2 { font-size: clamp(1.6rem, 1rem + 1.8vw, 2.4rem); line-height: 1.2; margin: 14px 0 16px; font-weight: 700; }
+.auth-visual p { color: var(--text-2); font-size: 1rem; line-height: 1.6; }
+.auth-features { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.auth-feature { padding: 16px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); }
+.auth-feature svg { color: var(--accent-strong); margin-bottom: 8px; }
+.auth-feature strong { display: block; font-size: 0.88rem; font-weight: 600; }
+.auth-feature span { font-size: 0.78rem; color: var(--text-3); }
+.auth-panel { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px 24px; }
+.auth-card { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 22px; }
+.auth-brand { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; }
+.auth-title { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.04em; margin-top: 4px; }
+.auth-subtitle { color: var(--text-2); font-size: 0.92rem; }
+.auth-tagline { font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-strong); font-weight: 600; }
+.auth-form { display: flex; flex-direction: column; gap: 16px; padding: 28px; border-radius: var(--radius-lg); background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.auth-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 0.86rem; flex-wrap: wrap; }
+.auth-foot { text-align: center; font-size: 0.78rem; color: var(--text-3); display: flex; flex-direction: column; gap: 6px; }
+.auth-secure { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.78rem; color: var(--text-3); }
+.auth-secure svg { color: var(--success); }
+@media (max-width: 960px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-visual { display: none; }
+}

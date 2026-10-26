@@ -1,0 +1,35 @@
+/* Project Atlas design tokens — Professional Enterprise Theme */
+:root {
+  --bg: #0c1017;
+  --bg-2: #131922;
+  --card: #1a222e;
+  --panel: #202b3a;
+  --panel-2: #273447;
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.14);
+  --accent-strong: #60a5fa;
+  --cyan: #38bdf8;
+  --cyan-soft: rgba(56, 189, 248, 0.12);
+  --text: #f1f5f9;
+  --text-2: #94a3b8;
+  --text-3: #64748b;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --border: rgba(148, 163, 184, 0.14);
+  --border-strong: rgba(37, 99, 235, 0.38);
+  --gradient: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  --glow: 0 4px 18px -4px rgba(0, 0, 0, 0.5);
+  --shadow: 0 12px 36px -12px rgba(0, 0, 0, 0.7);
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --sidebar-w: 264px;
+  --sidebar-w-collapsed: 76px;
+  --header-h: 68px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}

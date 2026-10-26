@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e293b"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#60a5fa"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 540H1200" stroke="#334155" stroke-width="2"/>
+    <path d="M100 540V360l140 80v-80l140 80v-80l140 80V250h60v290" stroke="url(#acc)" stroke-width="4" fill="#1e293b"/>
+    <path d="M620 540V300h80v240M740 540V200h50v340" stroke="#94a3b8" stroke-width="4"/>
+    <path d="M830 540V380h260v160" stroke="url(#acc)" stroke-width="4" fill="#1e293b"/>
+    <path d="M880 380v-60h60v60M990 380v-90h50v90" stroke="#38bdf8" stroke-width="3"/>
+    <g stroke="#64748b" stroke-width="2" opacity="0.4">
+      <path d="M765 180c-10-30 20-40 10-70"/>
+      <path d="M660 280c-12-24 14-36 4-60"/>
+    </g>
+    <g stroke="#3b82f6" stroke-width="2" opacity="0.6">
+      <path d="M150 480h40M260 480h40M370 480h40M480 480h40M870 460h60M970 460h60"/>
+    </g>
+  </g>
+  <text x="1160" y="640" text-anchor="end" font-family="system-ui, sans-serif" font-size="13" font-weight="600" letter-spacing="2" fill="#64748b">INDUSTRIAL PLANT FACILITY</text>
+</svg>
