@@ -1,6 +1,7 @@
 {
   "name": "project-atlas",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "description": "Project Atlas by Janyutech — Industrial Intelligence & Monitoring Portal",
   "workspaces": ["server", "client"],
