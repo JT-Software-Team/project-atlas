@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, KeyRound, Lock, Mail, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, Lock, UserRound } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../lib/api';
 import { Alert, Field, Spinner } from '../components/ui';
 import { AuthLayout } from './AuthLayout';
+
+/** Mirrors the server: an email address, or a provisioned `name@realm` user ID. */
+const LOGIN_ID = /^(?:[^@\s]+@[^@\s]+\.[^@\s]+|[a-z0-9][a-z0-9._-]{0,63}@[a-z0-9][a-z0-9-]{0,62})$/i;
 
 export function LoginPage() {
   const { login, status } = useAuth();
@@ -21,18 +24,11 @@ export function LoginPage() {
 
   if (status === 'authenticated') return <Navigate to={from} replace />;
 
-  const fillSuperAdmin = () => {
-    setEmail('admin@atlas.local');
-    setPassword('AtlasAdmin!2026');
-    setErrors({});
-    setFormError(null);
-  };
-
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const next: typeof errors = {};
-    if (!email.trim()) next.email = 'Enter your email address.';
-    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) next.email = 'Enter a valid email address.';
+    if (!email.trim()) next.email = 'Enter your email address or user ID.';
+    else if (!LOGIN_ID.test(email.trim())) next.email = 'Enter a valid email address or user ID.';
     if (!password) next.password = 'Enter your password.';
     setErrors(next);
     setFormError(null);
@@ -56,34 +52,24 @@ export function LoginPage() {
     <AuthLayout>
       <form className="auth-form" onSubmit={submit} noValidate aria-describedby={formError ? 'login-error' : undefined}>
         <div className="auth-form-header">
-          <div className="auth-form-title-row">
-            <h2 className="auth-form-title">Sign in</h2>
-            <button
-              type="button"
-              className="demo-pill-btn"
-              onClick={fillSuperAdmin}
-              title="Click to auto-fill Super Admin credentials"
-            >
-              <Sparkles size={13} aria-hidden="true" />
-              <span>Use Admin Demo</span>
-            </button>
-          </div>
-          <p className="subtle" style={{ marginTop: 4 }}>
-            Enter your authorized Janyutech enterprise credentials.
-          </p>
+          <h2 className="auth-form-title">Sign in</h2>
+          <p className="auth-form-desc">Use your authorised Janyutech account.</p>
         </div>
 
         {formError && <div id="login-error"><Alert tone={formError.tone}>{formError.text}</Alert></div>}
 
-        <Field label="Email address" error={errors.email}>
+        <Field label="Email or user ID" error={errors.email}>
           {(p) => (
             <div className="input-wrap">
-              <Mail size={17} aria-hidden="true" />
+              <UserRound size={17} aria-hidden="true" />
               <input
                 {...p}
                 className="input auth-input"
-                type="email"
+                type="text"
+                inputMode="email"
                 autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
                 placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -127,13 +113,9 @@ export function LoginPage() {
           <Link to="/forgot-password" className="auth-link">Forgot password?</Link>
         </div>
 
-        <button className="btn btn-primary btn-lg btn-block auth-submit-btn" type="submit" disabled={busy}>
-          {busy ? <><Spinner /> Authenticating…</> : <><KeyRound size={17} /> Sign in</>}
+        <button className="btn btn-primary btn-lg btn-block auth-submit-btn" type="submit" disabled={busy} aria-busy={busy}>
+          {busy ? <><Spinner /> Signing in…</> : <><KeyRound size={17} /> Sign in</>}
         </button>
-
-        <div className="auth-credentials-hint">
-          <span>Super Admin:</span> <code>admin@atlas.local</code> / <code>AtlasAdmin!2026</code>
-        </div>
       </form>
     </AuthLayout>
   );

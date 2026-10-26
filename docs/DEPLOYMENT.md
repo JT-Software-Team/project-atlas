@@ -38,6 +38,20 @@ docker run -d --name atlas -p 4000:4000 -v atlas-data:/data \
 docker exec -it atlas node server/dist/scripts/createAdmin.js   # or set ATLAS_ADMIN_* env and run once
 ```
 
+## Option C — Vercel (evaluation only)
+
+`api/index.js` runs the API as a serverless function with SQLite in the function's temporary directory. That storage is **not persistent**: it is wiped on every cold start or redeploy, taking users, password changes and content with it. Use Option A or B for real use.
+
+The Super Admin is provisioned from server-side environment variables (Project → Settings → Environment Variables), never from source:
+
+```
+ATLAS_ADMIN_EMAIL=atlas@admin
+ATLAS_ADMIN_NAME=Atlas Super Admin
+ATLAS_ADMIN_PASSWORD=<initial password>
+```
+
+Because the database resets, the account returns to its initial password, and must be changed again, after every cold start.
+
 ## Reverse proxy (HTTPS)
 
 Terminate TLS in Nginx, Caddy, or your cloud load balancer and forward to port 4000. Nginx example:

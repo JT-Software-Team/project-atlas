@@ -26,6 +26,17 @@ export function requireCsrfHeader(req: Request, _res: Response, next: NextFuncti
   next();
 }
 
+/** Routes a user may still reach while their initial password is awaiting replacement. */
+const PASSWORD_CHANGE_ALLOWED = new Set(['/auth/me', '/auth/logout', '/auth/change-password']);
+
+/** Accounts flagged for a password change can do nothing else until they choose a new one. */
+export function requirePasswordChange(req: Request, _res: Response, next: NextFunction) {
+  if (req.user?.mustChangePassword && !PASSWORD_CHANGE_ALLOWED.has(req.path)) {
+    return next(new HttpError(403, 'Please choose a new password before continuing.'));
+  }
+  next();
+}
+
 export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   if (!req.user) return next(new HttpError(401, 'Please sign in to continue.'));
   next();

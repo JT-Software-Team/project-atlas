@@ -4,6 +4,7 @@ import { RequireAuth, RequireRole } from './auth/guards';
 import { AppLayout } from './components/AppLayout';
 import { ToastProvider } from './components/Toast';
 import { CategoriesPage } from './pages/CategoriesPage';
+import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { ClientDetailPage, ClientsPage } from './pages/ClientsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LoginPage } from './pages/LoginPage';
@@ -30,6 +31,7 @@ export function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
               <Route index element={<OverviewPage />} />
               <Route path="projects" element={<ProjectsPage />} />

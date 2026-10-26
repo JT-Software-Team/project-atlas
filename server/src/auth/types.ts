@@ -7,6 +7,7 @@ export interface SessionUser {
   name: string;
   role: Role;
   clientId: number | null;
+  mustChangePassword: boolean;
 }
 
 declare global {

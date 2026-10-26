@@ -6,6 +6,7 @@ import { ah, HttpError } from '../http.js';
 import { hashPassword, passwordProblems, randomToken, sha256, verifyPassword } from '../auth/passwords.js';
 import { RateLimiter } from '../auth/rateLimit.js';
 import { clearSessionCookie, createSession, revokeUserSessions } from '../auth/sessions.js';
+import { loginId } from '../auth/loginId.js';
 import { requireAuth } from '../auth/middleware.js';
 import { audit } from '../services/audit.js';
 import type { Mailer } from '../services/mailer.js';
@@ -37,7 +38,7 @@ export function authRoutes(db: DB, mailer: Mailer) {
       throw new HttpError(429, 'Too many sign-in attempts. Please wait a few minutes and try again.');
     }
     const body = z.object({
-      email,
+      email: loginId,
       password: z.string().min(1, 'Enter your password.').max(200),
       remember: z.boolean().optional(),
     }).parse(req.body);
@@ -64,7 +65,7 @@ export function authRoutes(db: DB, mailer: Mailer) {
           .run(lock ? 0 : attempts, lock, user.id);
         audit(db, req, { action: 'auth.login_failed', summary: lock ? 'Failed sign-in; account locked temporarily' : 'Failed sign-in', entityType: 'user', entityId: user.id }, { id: user.id, name: user.name });
       }
-      throw new HttpError(401, 'The email or password is incorrect.');
+      throw new HttpError(401, 'The email/user ID or password is incorrect.');
     }
     if (!user.is_active) {
       throw new HttpError(403, 'Your access to Project Atlas has been disabled. Contact your Janyutech administrator.');
@@ -84,13 +85,14 @@ export function authRoutes(db: DB, mailer: Mailer) {
 
   r.get('/me', requireAuth, (req, res) => {
     const u = db.prepare(
-      `SELECT u.id, u.email, u.name, u.role, u.client_id, cl.name AS client_name, u.last_login_at
+      `SELECT u.id, u.email, u.name, u.role, u.client_id, cl.name AS client_name, u.last_login_at, u.must_change_password
          FROM users u LEFT JOIN clients cl ON cl.id = u.client_id WHERE u.id = ?`,
     ).get(req.user!.id) as Record<string, unknown>;
     res.json({
       user: {
         id: u.id, email: u.email, name: u.name, role: u.role,
         clientId: u.client_id, clientName: u.client_name, lastLoginAt: u.last_login_at,
+        mustChangePassword: !!u.must_change_password,
       },
     });
   });
@@ -144,7 +146,7 @@ export function authRoutes(db: DB, mailer: Mailer) {
     const hash = await hashPassword(body.password);
     transaction(db, () => {
       db.prepare('UPDATE password_tokens SET used_at = ? WHERE token_hash = ?').run(nowIso(), row.token_hash);
-      db.prepare('UPDATE users SET password_hash = ?, failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?')
+      db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0, failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?')
         .run(hash, nowIso(), row.user_id);
       revokeUserSessions(db, row.user_id);
     });
@@ -162,9 +164,11 @@ export function authRoutes(db: DB, mailer: Mailer) {
     if (!(await verifyPassword(body.currentPassword, user.password_hash))) {
       throw new HttpError(400, 'Your current password is incorrect.', { field: 'currentPassword' });
     }
-    const problem = passwordProblems(body.newPassword, config.auth.minPasswordLength);
+    const problem = body.newPassword === body.currentPassword
+      ? 'Choose a password different from your current one.'
+      : passwordProblems(body.newPassword, config.auth.minPasswordLength);
     if (problem) throw new HttpError(400, problem, { field: 'newPassword' });
-    db.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?').run(await hashPassword(body.newPassword), nowIso(), req.user!.id);
+    db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = ? WHERE id = ?').run(await hashPassword(body.newPassword), nowIso(), req.user!.id);
     revokeUserSessions(db, req.user!.id, req.sessionTokenHash);
     audit(db, req, { action: 'auth.password_changed', summary: 'Changed password; other sessions signed out', entityType: 'user', entityId: req.user!.id });
     res.json({ ok: true });

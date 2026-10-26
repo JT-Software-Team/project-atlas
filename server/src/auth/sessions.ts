@@ -34,10 +34,10 @@ export function loadSession(db: DB, token: string | undefined): { user: SessionU
   if (!token || token.length > 200) return null;
   const tokenHash = sha256(token);
   const row = db.prepare(
-    `SELECT s.expires_at, s.last_seen_at, u.id, u.email, u.name, u.role, u.client_id, u.is_active
+    `SELECT s.expires_at, s.last_seen_at, u.id, u.email, u.name, u.role, u.client_id, u.is_active, u.must_change_password
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`,
   ).get(tokenHash) as
-    | { expires_at: string; last_seen_at: string; id: number; email: string; name: string; role: Role; client_id: number | null; is_active: number }
+    | { expires_at: string; last_seen_at: string; id: number; email: string; name: string; role: Role; client_id: number | null; is_active: number; must_change_password: number }
     | undefined;
   if (!row) return null;
   if (row.expires_at <= nowIso() || !row.is_active) {
@@ -50,7 +50,10 @@ export function loadSession(db: DB, token: string | undefined): { user: SessionU
   }
   return {
     tokenHash,
-    user: { id: row.id, email: row.email, name: row.name, role: row.role, clientId: row.client_id },
+    user: {
+      id: row.id, email: row.email, name: row.name, role: row.role, clientId: row.client_id,
+      mustChangePassword: !!row.must_change_password,
+    },
   };
 }
 

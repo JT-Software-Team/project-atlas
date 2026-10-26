@@ -13,6 +13,8 @@ export interface User {
   clientId: number | null;
   clientName: string | null;
   lastLoginAt: string | null;
+  /** Set on provisioned accounts until the initial password is replaced. */
+  mustChangePassword?: boolean;
 }
 
 export interface Location { siteName: string | null; city: string | null; state: string | null; country: string | null }

@@ -25,7 +25,7 @@ Requirements: **Node.js 22.13+** (uses the built-in `node:sqlite` module).
 ```bash
 npm install
 cp .env.example .env            # then set ATLAS_SECURE_COOKIES=false and ATLAS_APP_URL=http://localhost:5173 for local HTTP
-npm run create-admin            # create your Super Admin (prompts for email, name, password)
+npm run create-admin            # create your Super Admin (prompts for email or user ID, name, password; must be changed at first sign-in)
 npm run seed                    # optional: default categories + the 3 demo projects
 npm run seed -- --demo-users    # optional: also 3 demo accounts with random passwords, printed once
 npm run dev                     # API on :4000, web app on http://localhost:5173

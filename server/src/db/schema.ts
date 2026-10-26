@@ -208,4 +208,7 @@ export const migrations: string[] = [
   CREATE INDEX audit_at ON audit_log(at);
   CREATE INDEX audit_project ON audit_log(project_id);
   `,
+  /* 2 — accounts provisioned with an initial password must choose a new one at first sign-in */ `
+  ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0;
+  `,
 ];

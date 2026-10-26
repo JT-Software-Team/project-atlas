@@ -3,7 +3,7 @@ import path from 'node:path';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
-import { requireCsrfHeader, sessionMiddleware } from './auth/middleware.js';
+import { requireCsrfHeader, requirePasswordChange, sessionMiddleware } from './auth/middleware.js';
 import './auth/types.js';
 import { config } from './config.js';
 import type { DB } from './db/index.js';
@@ -55,6 +55,7 @@ export function createApp({ db, mailer, staticDir }: AppOptions) {
   api.use('/public', publicRoutes(db));
   api.use(sessionMiddleware(db));
   api.use(requireCsrfHeader);
+  api.use(requirePasswordChange);
   api.use('/auth', authRoutes(db, mailer));
   api.use('/projects', projectRoutes(db));
   api.use('/dashboards', dashboardRoutes(db));

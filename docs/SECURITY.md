@@ -5,7 +5,7 @@ This document describes the security controls implemented in Project Atlas and w
 ## Authentication
 
 - Passwords are hashed with **scrypt** (N=2^15, r=8, p=1, 16-byte salt). Plain-text passwords are never stored or logged, and there are no hard-coded credentials anywhere in the source.
-- The first Super Admin is created with `npm run create-admin`. Other users are **invited**: the administrator never chooses or sees their password; the user sets it through a single-use link (72 h).
+- The first Super Admin is created with `npm run create-admin` (or, on Vercel, from the `ATLAS_ADMIN_*` environment variables). Its login may be an email address or a user ID such as `atlas@admin`. The account is flagged to **change its initial password at first sign-in**, and the API refuses every other request until it does. Provisioning never overwrites an existing account unless `-- --reset` is passed. Other users are **invited**: the administrator never chooses or sees their password; the user sets it through a single-use link (72 h).
 - Password policy: at least 10 characters and three of lowercase / uppercase / digits / symbols.
 - Sessions are random 256-bit tokens in an **httpOnly, SameSite=Lax, Secure** cookie. The database stores only a SHA-256 hash, so a database leak does not expose live sessions. Sessions expire after 12 hours (30 days with "Keep me signed in"), and can be revoked by the user or an administrator.
 - **Login protection**: 20 attempts per IP per 15 minutes, and accounts lock for 15 minutes after 5 consecutive failures. Error messages do not reveal whether an email exists; the forgot-password flow always gives the same answer.
@@ -45,7 +45,8 @@ Sign-ins, failed sign-ins, password events, user changes, role changes, access g
 
 - [ ] Serve only over HTTPS; keep `ATLAS_SECURE_COOKIES=true`; set `ATLAS_TRUST_PROXY=true` behind a proxy so rate limiting sees real client IPs.
 - [ ] Configure a real email transport (see INTEGRATIONS.md) so reset and invitation emails are delivered.
-- [ ] Create named Super Admin accounts; delete or disable any `--demo-users` accounts.
+- [ ] Create named Super Admin accounts; delete or disable any `--demo-users` accounts and any account whose password has ever been shared or committed.
+- [ ] Remove `ATLAS_ADMIN_PASSWORD` from the environment once the initial Super Admin has signed in and changed its password.
 - [ ] Restrict file-system access to `ATLAS_DATA_DIR` and back it up (database + uploads), encrypted at rest.
 - [ ] Review the activity log regularly; consider exporting it to your SIEM.
 - [ ] If running more than one server instance, move rate limiting to a shared store and the database to PostgreSQL.

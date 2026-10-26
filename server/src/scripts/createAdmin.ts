@@ -1,13 +1,15 @@
 /**
- * Create (or reset) a Super Admin account.
+ * Create the initial Super Admin account. The password must be changed at first sign-in.
  * Interactive:      npm run create-admin
  * Non-interactive:  ATLAS_ADMIN_EMAIL=… ATLAS_ADMIN_NAME=… ATLAS_ADMIN_PASSWORD=… npm run create-admin
+ * ATLAS_ADMIN_EMAIL may be an email address or a user ID such as `atlas@admin`.
+ * An existing account is never changed unless `-- --reset` is passed.
  */
 import path from 'node:path';
 import readline from 'node:readline/promises';
 import { config } from '../config.js';
-import { nowIso, openDatabase } from '../db/index.js';
-import { hashPassword, passwordProblems } from '../auth/passwords.js';
+import { openDatabase } from '../db/index.js';
+import { provisionSuperAdmin } from '../auth/provision.js';
 import { ensureReferenceData } from './referenceData.js';
 
 const db = openDatabase(path.join(config.dataDir, 'atlas.db'));
@@ -16,29 +18,19 @@ ensureReferenceData(db);
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const ask = async (q: string, env?: string) => (env ? env : (await rl.question(q)).trim());
 
-const email = (await ask('Admin email: ', process.env.ATLAS_ADMIN_EMAIL)).toLowerCase();
+const loginId = (await ask('Admin email or user ID: ', process.env.ATLAS_ADMIN_EMAIL)).toLowerCase();
 const name = await ask('Full name: ', process.env.ATLAS_ADMIN_NAME);
 const password = await ask('Password (min 10 chars, 3 character types): ', process.env.ATLAS_ADMIN_PASSWORD);
 rl.close();
 
-if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !name) {
-  console.error('A valid email and name are required.');
+try {
+  const result = await provisionSuperAdmin(db, { loginId, name, password, reset: process.argv.includes('--reset') }, config.auth.minPasswordLength);
+  if (result === 'exists') {
+    console.info(`${loginId} already exists and was left unchanged. Re-run with \`-- --reset\` to replace its password and make it a Super Admin.`);
+  } else {
+    console.info(`${result === 'created' ? 'Created' : 'Reset'} Super Admin ${loginId}. The password must be changed at first sign-in.`);
+  }
+} catch (err) {
+  console.error((err as Error).message);
   process.exit(1);
-}
-const problem = passwordProblems(password, config.auth.minPasswordLength);
-if (problem) {
-  console.error(problem);
-  process.exit(1);
-}
-
-const hash = await hashPassword(password);
-const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email) as { id: number } | undefined;
-if (existing) {
-  db.prepare(`UPDATE users SET name = ?, role = 'super_admin', password_hash = ?, is_active = 1, failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?`)
-    .run(name, hash, nowIso(), existing.id);
-  console.info(`Updated ${email} and made them a Super Admin.`);
-} else {
-  db.prepare(`INSERT INTO users (email, name, role, password_hash, created_at, updated_at) VALUES (?, ?, 'super_admin', ?, ?, ?)`)
-    .run(email, name, hash, nowIso(), nowIso());
-  console.info(`Created Super Admin ${email}.`);
 }

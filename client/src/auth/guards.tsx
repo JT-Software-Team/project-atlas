@@ -7,10 +7,12 @@ import { FullScreenLoader, StateMessage } from '../components/ui';
 
 /** Client-side guard for navigation only. The API enforces every permission independently. */
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const location = useLocation();
   if (status === 'loading') return <FullScreenLoader />;
-  if (status === 'anonymous') return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  const from = location.pathname + location.search;
+  if (status === 'anonymous') return <Navigate to="/login" replace state={{ from }} />;
+  if (user?.mustChangePassword) return <Navigate to="/change-password" replace state={{ from }} />;
   return <>{children}</>;
 }
 
