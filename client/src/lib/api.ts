@@ -36,8 +36,14 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
   if (!res.ok) {
     if (res.status === 401 && !url.startsWith('/auth/')) unauthorizedListeners.forEach((fn) => fn());
     const fields: Record<string, string> | undefined = data.fields
-      ?? (data.details?.field ? { [data.details.field]: data.error } : undefined);
-    throw new ApiError(res.status, data.error ?? `Request failed (${res.status}).`, fields, data.details);
+    const errorText = typeof data.error === 'string'
+      ? data.error
+      : typeof data.message === 'string'
+      ? data.message
+      : typeof data.error?.message === 'string'
+      ? data.error.message
+      : `Request failed (${res.status}).`;
+    throw new ApiError(res.status, errorText, fields, data.details);
   }
   return data as T;
 }
