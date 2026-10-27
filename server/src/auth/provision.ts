@@ -28,19 +28,19 @@ export async function provisionSuperAdmin(db: DB, input: SuperAdminInput, minPas
   const problem = passwordProblems(input.password, minPasswordLength);
   if (problem) throw new Error(problem);
 
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(loginId) as { id: number } | undefined;
+  const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(loginId) as { id: number } | undefined;
   if (existing && !input.reset) return 'exists';
 
   const mustChange = input.mustChangePassword ?? true ? 1 : 0;
   const hash = await hashPassword(input.password);
   if (existing) {
-    db.prepare(`UPDATE users SET name = ?, role = 'super_admin', password_hash = ?, must_change_password = ?, is_active = 1,
+    await db.prepare(`UPDATE users SET name = ?, role = 'super_admin', password_hash = ?, must_change_password = ?, is_active = 1,
                 failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?`)
       .run(name, hash, mustChange, nowIso(), existing.id);
-    revokeUserSessions(db, existing.id);
+    await revokeUserSessions(db, existing.id);
     return 'updated';
   }
-  db.prepare(`INSERT INTO users (email, name, role, password_hash, must_change_password, created_at, updated_at)
+  await db.prepare(`INSERT INTO users (email, name, role, password_hash, must_change_password, created_at, updated_at)
               VALUES (?, ?, 'super_admin', ?, ?, ?, ?)`)
     .run(loginId, name, hash, mustChange, nowIso(), nowIso());
   return 'created';

@@ -25,8 +25,8 @@ export interface AccessFields {
 
 export type GrantMap = Map<number, 'view' | 'technical' | 'manage'>;
 
-export function loadGrants(db: DB, userId: number): GrantMap {
-  const rows = db.prepare('SELECT project_id, level FROM project_access WHERE user_id = ?').all(userId) as
+export async function loadGrants(db: DB, userId: number): Promise<GrantMap> {
+  const rows = await db.prepare('SELECT project_id, level FROM project_access WHERE user_id = ?').all(userId) as
     { project_id: number; level: 'view' | 'technical' | 'manage' }[];
   return new Map(rows.map((r) => [r.project_id, r.level]));
 }
@@ -60,12 +60,12 @@ export function accessFor(user: SessionUser, project: AccessFields, grants: Gran
   return NO_ACCESS;
 }
 
-export function projectAccessById(db: DB, user: SessionUser, projectId: number): ProjectAccess {
-  const row = db.prepare(
+export async function projectAccessById(db: DB, user: SessionUser, projectId: number): Promise<ProjectAccess> {
+  const row = await db.prepare(
     'SELECT id, visibility, authorized_roles, client_access, client_id, owner_user_id, archived_at FROM projects WHERE id = ?',
   ).get(projectId) as AccessFields | undefined;
   if (!row) return NO_ACCESS;
-  return accessFor(user, row, loadGrants(db, user.id));
+  return accessFor(user, row, await loadGrants(db, user.id));
 }
 
 export function safeJsonArray(value: unknown): string[] {

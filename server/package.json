@@ -9,10 +9,13 @@
     "start": "node --env-file-if-exists=../.env dist/index.js",
     "seed": "tsx --env-file-if-exists=../.env src/scripts/seed.ts",
     "create-admin": "tsx --env-file-if-exists=../.env src/scripts/createAdmin.ts",
+    "migrate-to-hosted": "tsx --env-file-if-exists=../.env --env-file-if-exists=../.env.hosted src/scripts/migrateToHosted.ts",
+    "backup": "tsx --env-file-if-exists=../.env --env-file-if-exists=../.env.hosted src/scripts/backup.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "cookie-parser": "^1.4.7",
     "express": "^4.22.3",
     "helmet": "^8.3.0",

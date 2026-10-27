@@ -8,18 +8,18 @@ import { insertDemoProjects } from '../scripts/demoData.js';
 export const PASSWORD = 'Correct-Horse-42';
 
 export async function setup() {
-  const db = openDatabase(':memory:');
-  insertDemoProjects(db);
+  const db = await openDatabase(':memory:');
+  await insertDemoProjects(db);
   const mailer = new MemoryMailer();
   const app = createApp({ db, mailer });
   const hash = await hashPassword(PASSWORD);
-  const mk = (email: string, name: string, role: string) => Number(db.prepare(
+  const mk = async (email: string, name: string, role: string) => Number((await db.prepare(
     'INSERT INTO users (email, name, role, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-  ).run(email, name, role, hash, nowIso(), nowIso()).lastInsertRowid);
+  ).run(email, name, role, hash, nowIso(), nowIso())).lastInsertRowid);
   const ids = {
-    admin: mk('admin@test.local', 'Ada Admin', 'super_admin'),
-    pa: mk('pa@test.local', 'Paul ProjectAdmin', 'project_admin'),
-    viewer: mk('viewer@test.local', 'Vera Viewer', 'viewer'),
+    admin: await mk('admin@test.local', 'Ada Admin', 'super_admin'),
+    pa: await mk('pa@test.local', 'Paul ProjectAdmin', 'project_admin'),
+    viewer: await mk('viewer@test.local', 'Vera Viewer', 'viewer'),
   };
   return { db, app, mailer, ids };
 }
@@ -33,6 +33,6 @@ export async function login(app: ReturnType<typeof createApp>, email: string, pa
   return { agent, get: wrap('get'), post: wrap('post'), put: wrap('put'), del: wrap('delete') };
 }
 
-export function projectId(db: DB, slug: string) {
-  return (db.prepare('SELECT id FROM projects WHERE slug = ?').get(slug) as { id: number }).id;
+export async function projectId(db: DB, slug: string) {
+  return (await db.prepare('SELECT id FROM projects WHERE slug = ?').get(slug) as { id: number }).id;
 }

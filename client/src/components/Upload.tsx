@@ -59,6 +59,7 @@ export function MediaUpload({ label, kind = 'image', value, onChange, hint, cont
   const [error, setError] = useState<string>();
   const [drag, setDrag] = useState(false);
   const [localPreview, setLocalPreview] = useState<string>();
+  const [brokenSrc, setBrokenSrc] = useState<string>();
 
   const handle = async (file?: File) => {
     if (!file) return;
@@ -93,7 +94,9 @@ export function MediaUpload({ label, kind = 'image', value, onChange, hint, cont
         onDrop={(e) => { e.preventDefault(); setDrag(false); void handle(e.dataTransfer.files[0]); }}
       >
         {busy && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(11,11,24,0.6)', zIndex: 1 }}><Spinner /></div>}
-        {kind === 'image' && shown ? <img src={shown} alt={`${label} preview`} />
+        {kind === 'image' && shown && brokenSrc === shown ? (
+          <div className="upload-empty" role="status"><ImagePlus size={24} aria-hidden="true" /><span>Preview unavailable. Replace the image or try again later.</span></div>
+        ) : kind === 'image' && shown ? <img src={shown} alt={`${label} preview`} onError={() => setBrokenSrc(shown)} />
           : kind === 'document' && value ? (
             <div className="upload-file"><FileText size={22} color="var(--accent-strong)" /><div><strong style={{ fontSize: '0.86rem' }}>{value.name ?? 'Document'}</strong>{value.size ? <div className="subtle">{formatBytes(value.size)}</div> : null}</div></div>
           ) : (

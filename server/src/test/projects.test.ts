@@ -44,22 +44,22 @@ describe('projects and permissions', () => {
     await admin.put(`/api/projects/${id}/access`).send({ grants: [{ userId: ids.viewer, level: 'technical' }] });
     expect((await viewer.get(`/api/projects/${id}`)).body.project.technical.equipmentName).toBe('Secret Press 9000');
     expect((await viewer.get('/api/projects?q=secret')).body.total).toBe(1);
-    expect(db.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'access.granted'`).get()).toEqual({ n: 2 });
+    expect(await db.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'access.granted'`).get()).toEqual({ n: 2 });
   });
 
   it('prevents viewers from administrative operations', async () => {
     const { app, db } = await setup();
     const viewer = await login(app, 'viewer@test.local');
     expect((await viewer.post('/api/projects').send(validProject)).status).toBe(403);
-    expect((await viewer.put(`/api/projects/${projectId(db, 'gunny-ball-project')}`).send(validProject)).status).toBe(403);
+    expect((await viewer.put(`/api/projects/${(await projectId(db, 'gunny-ball-project'))}`).send(validProject)).status).toBe(403);
     expect((await viewer.get('/api/users')).status).toBe(403);
     expect((await viewer.post('/api/categories').send({ name: 'Hack' })).status).toBe(403);
   });
 
   it('lets a project admin manage only assigned projects', async () => {
     const { app, db, ids } = await setup();
-    const gunny = projectId(db, 'gunny-ball-project');
-    const anode = projectId(db, 'anode-chipping-project');
+    const gunny = (await projectId(db, 'gunny-ball-project'));
+    const anode = (await projectId(db, 'anode-chipping-project'));
     const admin = await login(app, 'admin@test.local');
     await admin.put(`/api/projects/${gunny}/access`).send({ grants: [{ userId: ids.pa, level: 'manage' }] });
 
@@ -91,7 +91,7 @@ describe('projects and permissions', () => {
     const res = await admin.get(dash.launchUrl);
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe('https://dashboards.example.com/live');
-    expect(db.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'dashboard.opened'`).get()).toEqual({ n: 1 });
+    expect(await db.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'dashboard.opened'`).get()).toEqual({ n: 1 });
 
     const viewer = await login(app, 'viewer@test.local');
     expect((await viewer.get(dash.launchUrl)).status).toBe(404);
@@ -111,7 +111,7 @@ describe('projects and permissions', () => {
 
   it('archives, restores and only deletes archived projects with confirmation', async () => {
     const { app, db } = await setup();
-    const id = projectId(db, 'anode-chipping-project');
+    const id = (await projectId(db, 'anode-chipping-project'));
     const admin = await login(app, 'admin@test.local');
     expect((await admin.del(`/api/projects/${id}`).send({ confirm: 'anode-chipping-project' })).status).toBe(409);
     expect((await admin.post(`/api/projects/${id}/archive`)).status).toBe(200);

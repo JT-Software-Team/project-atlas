@@ -19,7 +19,7 @@ describe('user management and super admin protection', () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
 
-    const exists = db.prepare('SELECT 1 FROM users WHERE id = ?').get(ids.viewer);
+    const exists = await db.prepare('SELECT 1 FROM users WHERE id = ?').get(ids.viewer);
     expect(exists).toBeUndefined();
   });
 

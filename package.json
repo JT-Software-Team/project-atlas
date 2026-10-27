@@ -11,6 +11,8 @@
     "start": "npm run start -w server",
     "seed": "npm run seed -w server",
     "create-admin": "npm run create-admin -w server",
+    "migrate-to-hosted": "npm run migrate-to-hosted -w server",
+    "backup": "npm run backup -w server",
     "test": "npm run test -w server && npm run test -w client",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w client"
   },

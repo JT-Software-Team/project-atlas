@@ -12,6 +12,9 @@ import { CardSkeletons, ErrorState, PageHeader, StateMessage } from '../componen
 
 type Mode = 'all' | 'favorites' | 'recent';
 
+/** Cards rendered per step; search and filters always cover the full list. */
+const PAGE_SIZE = 24;
+
 const SORTS: { value: string; label: string; modes?: Mode[] }[] = [
   { value: 'updated', label: 'Recently updated' },
   { value: 'name_asc', label: 'Alphabetical (A–Z)' },
@@ -41,6 +44,8 @@ export function ProjectsPage({ mode = 'all' }: { mode?: Mode }) {
   };
   const url = `/projects${qs({ ...filters, favorites: mode === 'favorites' ? 1 : undefined, recent: mode === 'recent' ? 1 : undefined })}`;
   const { data, error, loading, reload, setData } = useApi<{ projects: Card[]; total: number; facets: Facets }>(url);
+  const [shown, setShown] = useState(PAGE_SIZE);
+  useEffect(() => setShown(PAGE_SIZE), [url]);
 
   // Keep the search box in sync when navigating via the header search.
   useEffect(() => setQ(params.get('q') ?? ''), [params]);
@@ -137,9 +142,18 @@ export function ProjectsPage({ mode = 'all' }: { mode?: Mode }) {
               action={active.length > 0 && <button className="btn" onClick={() => { setParams({}, { replace: true }); setQ(''); }}>Clear filters</button>} />
           )
         ) : (
-          <div className="project-grid" aria-busy={loading}>
-            {data!.projects.map((p) => <ProjectCard key={p.id} project={p} onToggleFavorite={toggleFavorite} />)}
-          </div>
+          <>
+            <div className="project-grid" aria-busy={loading}>
+              {data!.projects.slice(0, shown).map((p) => <ProjectCard key={p.id} project={p} onToggleFavorite={toggleFavorite} />)}
+            </div>
+            {data!.projects.length > shown && (
+              <div className="row" style={{ justifyContent: 'center', marginTop: 22 }}>
+                <button className="btn" onClick={() => setShown((n) => n + PAGE_SIZE)}>
+                  Show more ({data!.projects.length - shown} remaining)
+                </button>
+              </div>
+            )}
+          </>
         )}
     </>
   );

@@ -38,19 +38,30 @@ docker run -d --name atlas -p 4000:4000 -v atlas-data:/data \
 docker exec -it atlas node server/dist/scripts/createAdmin.js   # or set ATLAS_ADMIN_* env and run once
 ```
 
-## Option C — Vercel (evaluation only)
+## Option C — Vercel
 
-`api/index.js` runs the API as a serverless function with SQLite in the function's temporary directory. That storage is **not persistent**: it is wiped on every cold start or redeploy, taking users, password changes and content with it. Use Option A or B for real use.
+`api/index.js` runs the API as a serverless function. Vercel starts several short-lived instances at once and routes each request to any of them, so the data **must** live in a hosted database that all instances share. Project Atlas uses [Turso](https://turso.tech) (hosted libSQL, SQLite-compatible): the same schema and queries, plus the uploaded images and documents, which are stored in the database.
 
-The Super Admin is provisioned from server-side environment variables (Project → Settings → Environment Variables), never from source:
+1. Create a Turso database, either through the Vercel Marketplace (Project → Storage → Turso, which sets `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` for you) or with the Turso CLI:
+   ```
+   turso db create project-atlas
+   turso db show project-atlas --url        # libsql://project-atlas-<org>.turso.io
+   turso db tokens create project-atlas
+   ```
+2. In Project → Settings → Environment Variables, set (if the Marketplace did not):
+   ```
+   ATLAS_DATABASE_URL=libsql://project-atlas-<org>.turso.io
+   ATLAS_DATABASE_AUTH_TOKEN=<token>
+   ```
+3. Also set `ATLAS_SESSION_SECRET` (random, at least 32 characters) and, for the first Super Admin, `ATLAS_ADMIN_EMAIL`, `ATLAS_ADMIN_NAME` and `ATLAS_ADMIN_PASSWORD`. Set every variable for the **Production** environment (and Preview, if preview deployments should work).
+4. To keep existing local data, copy it into the new database **before the first deployment** (see "Moving local data to the hosted database" in [OPERATIONS.md](OPERATIONS.md)). Otherwise the first request creates the schema, the default categories and the demo projects.
+5. Deploy.
 
-```
-ATLAS_ADMIN_EMAIL=atlas@admin
-ATLAS_ADMIN_NAME=Atlas Super Admin
-ATLAS_ADMIN_PASSWORD=<initial password>
-```
+The function refuses to start (HTTP 503 with a generic message; details in the function logs) when the database URL, its token or the session secret is missing. It never falls back to an instance-local database.
 
-Because the database resets, the account returns to its initial password, and must be changed again, after every cold start.
+The Super Admin from `ATLAS_ADMIN_*` is created only if that account does not exist; an existing account and any password changed in the portal are left alone. To recover access, set `ATLAS_ADMIN_RESET=true` for one deployment, sign in, then remove it. There is no built-in default account or password.
+
+Vercel limits request bodies to about 4.5 MB. The browser shrinks large photos before uploading; PDFs must be under that size.
 
 ## Reverse proxy (HTTPS)
 
@@ -79,12 +90,10 @@ The portal is a separate application. The simplest integration is a "Client Port
 
 ## Backups
 
-Everything stateful lives in `ATLAS_DATA_DIR`:
+- **Hosted database (Vercel):** `npm run backup` (with `ATLAS_DATABASE_URL`/`ATLAS_DATABASE_AUTH_TOKEN` set locally) exports every record and uploaded file to `data/backups/atlas-<timestamp>.db`. See [OPERATIONS.md](OPERATIONS.md).
+- **Local/Docker:** everything stateful lives in `ATLAS_DATA_DIR`: `atlas.db` (+ `-wal`/`-shm`) and, for files uploaded before they were stored in the database, `uploads/`. `npm run backup` works here too, or use `sqlite3 atlas.db ".backup backup.db"`.
 
-- `atlas.db` (+ `-wal`/`-shm`) — the database. Use `sqlite3 atlas.db ".backup backup.db"` or stop the service before copying.
-- `uploads/` — processed images and PDFs.
-
-Schedule daily encrypted backups and test restores.
+Keep backups somewhere other than the machine they came from, and test a restore occasionally.
 
 ## Scaling notes
 

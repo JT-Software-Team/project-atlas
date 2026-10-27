@@ -13,7 +13,7 @@ describe('initial Super Admin provisioning', () => {
     const s = await login(app, 'ATLAS@admin', INITIAL);
     const me = (await s.get('/api/auth/me')).body.user;
     expect(me).toMatchObject({ email: 'atlas@admin', role: 'super_admin', mustChangePassword: true });
-    const row = db.prepare('SELECT password_hash FROM users WHERE email = ?').get('atlas@admin') as { password_hash: string };
+    const row = await db.prepare('SELECT password_hash FROM users WHERE email = ?').get('atlas@admin') as { password_hash: string };
     expect(row.password_hash).toMatch(/^scrypt\$/);
     expect(row.password_hash).not.toContain(INITIAL);
   });

@@ -14,11 +14,11 @@ import type { Mailer } from '../services/mailer.js';
 const email = z.string().trim().toLowerCase().email('Enter a valid email address.').max(254);
 
 /** Issue a single-use password token (reset or invite). Returns the raw token for the link. */
-export function issuePasswordToken(db: DB, userId: number, purpose: 'reset' | 'invite'): string {
+export async function issuePasswordToken(db: DB, userId: number, purpose: 'reset' | 'invite'): Promise<string> {
   const token = randomToken();
   const ttl = purpose === 'invite' ? config.auth.inviteTokenHours * 3600_000 : config.auth.resetTokenMinutes * 60_000;
-  db.prepare('UPDATE password_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL').run(nowIso(), userId);
-  db.prepare('INSERT INTO password_tokens (token_hash, user_id, purpose, created_at, expires_at) VALUES (?, ?, ?, ?, ?)')
+  await db.prepare('UPDATE password_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL').run(nowIso(), userId);
+  await db.prepare('INSERT INTO password_tokens (token_hash, user_id, purpose, created_at, expires_at) VALUES (?, ?, ?, ?, ?)')
     .run(sha256(token), userId, purpose, nowIso(), new Date(Date.now() + ttl).toISOString());
   return token;
 }
@@ -43,25 +43,16 @@ export function authRoutes(db: DB, mailer: Mailer) {
       remember: z.boolean().optional(),
     }).parse(req.body);
 
-    let user = db.prepare(
+    const user = await db.prepare(
       'SELECT id, name, password_hash, is_active, failed_attempts, locked_until FROM users WHERE email = ?',
     ).get(body.email) as
       | { id: number; name: string; password_hash: string | null; is_active: number; failed_attempts: number; locked_until: string | null }
       | undefined;
 
-    if (!user && (body.email === 'admin@atlas' || body.email === 'admin@atlas.local')) {
-      const alt = body.email === 'admin@atlas' ? 'admin@atlas.local' : 'admin@atlas';
-      user = db.prepare(
-        'SELECT id, name, password_hash, is_active, failed_attempts, locked_until FROM users WHERE email = ?',
-      ).get(alt) as typeof user;
-    }
-
+    // Lockout applies to every account, administrators included.
     if (user?.locked_until && user.locked_until > nowIso()) {
-      const isMasterAdmin = (body.email === 'admin@atlas' || body.email === 'admin@atlas.local') && body.password === 'AtlasAdmin@123';
-      if (!isMasterAdmin) {
-        await verifyPassword(body.password, null);
-        throw new HttpError(423, 'This account is temporarily locked after repeated failed attempts. Try again later or reset your password.');
-      }
+      await verifyPassword(body.password, null);
+      throw new HttpError(423, 'This account is temporarily locked after repeated failed attempts. Try again later or reset your password.');
     }
 
     const ok = await verifyPassword(body.password, user?.password_hash ?? null);
@@ -71,9 +62,9 @@ export function authRoutes(db: DB, mailer: Mailer) {
         const lock = attempts >= config.auth.maxFailedAttempts
           ? new Date(Date.now() + config.auth.lockoutMinutes * 60_000).toISOString()
           : null;
-        db.prepare('UPDATE users SET failed_attempts = ?, locked_until = ? WHERE id = ?')
+        await db.prepare('UPDATE users SET failed_attempts = ?, locked_until = ? WHERE id = ?')
           .run(lock ? 0 : attempts, lock, user.id);
-        audit(db, req, { action: 'auth.login_failed', summary: lock ? 'Failed sign-in; account locked temporarily' : 'Failed sign-in', entityType: 'user', entityId: user.id }, { id: user.id, name: user.name });
+        await audit(db, req, { action: 'auth.login_failed', summary: lock ? 'Failed sign-in; account locked temporarily' : 'Failed sign-in', entityType: 'user', entityId: user.id }, { id: user.id, name: user.name });
       }
       throw new HttpError(401, 'The email/user ID or password is incorrect.');
     }
@@ -81,20 +72,20 @@ export function authRoutes(db: DB, mailer: Mailer) {
       throw new HttpError(403, 'Your access to Project Atlas has been disabled. Contact your Janyutech administrator.');
     }
 
-    db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?').run(nowIso(), user.id);
-    createSession(db, req, res, user.id, !!body.remember);
-    audit(db, req, { action: 'auth.login', summary: 'Signed in', entityType: 'user', entityId: user.id }, { id: user.id, name: user.name });
+    await db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?').run(nowIso(), user.id);
+    await createSession(db, req, res, user.id, !!body.remember);
+    await audit(db, req, { action: 'auth.login', summary: 'Signed in', entityType: 'user', entityId: user.id }, { id: user.id, name: user.name });
     res.json({ ok: true });
   }));
 
-  r.post('/logout', (req, res) => {
-    if (req.sessionTokenHash) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(req.sessionTokenHash);
+  r.post('/logout', ah(async (req, res) => {
+    if (req.sessionTokenHash) await db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(req.sessionTokenHash);
     clearSessionCookie(res);
     res.json({ ok: true });
-  });
+  }));
 
-  r.get('/me', requireAuth, (req, res) => {
-    const u = db.prepare(
+  r.get('/me', requireAuth, ah(async (req, res) => {
+    const u = await db.prepare(
       `SELECT u.id, u.email, u.name, u.role, u.client_id, cl.name AS client_name, u.last_login_at, u.must_change_password
          FROM users u LEFT JOIN clients cl ON cl.id = u.client_id WHERE u.id = ?`,
     ).get(req.user!.id) as Record<string, unknown>;
@@ -105,62 +96,62 @@ export function authRoutes(db: DB, mailer: Mailer) {
         mustChangePassword: !!u.must_change_password,
       },
     });
-  });
+  }));
 
   r.post('/forgot', ah(async (req, res) => {
     const generic = { ok: true, message: 'If an active account exists for that email, a reset link has been sent.' };
     if (forgotByIp.hit(req.ip ?? 'unknown')) throw new HttpError(429, 'Too many requests. Please wait a few minutes.');
     const body = z.object({ email }).parse(req.body);
-    const user = db.prepare('SELECT id, name, email, is_active FROM users WHERE email = ?').get(body.email) as
+    const user = await db.prepare('SELECT id, name, email, is_active FROM users WHERE email = ?').get(body.email) as
       { id: number; name: string; email: string; is_active: number } | undefined;
     if (user?.is_active) {
-      const token = issuePasswordToken(db, user.id, 'reset');
+      const token = await issuePasswordToken(db, user.id, 'reset');
       await mailer.send({
         to: user.email,
         subject: 'Reset your Project Atlas password',
         text: `Hello ${user.name},\n\nUse this link to choose a new password. It expires in ${config.auth.resetTokenMinutes} minutes and can be used once:\n\n${passwordLink(token)}\n\nIf you did not request this, you can ignore this email.\n\n— Janyutech Project Atlas`,
       });
-      audit(db, req, { action: 'auth.reset_requested', summary: 'Password reset requested', entityType: 'user', entityId: user.id }, { id: user.id, name: user.name });
+      await audit(db, req, { action: 'auth.reset_requested', summary: 'Password reset requested', entityType: 'user', entityId: user.id }, { id: user.id, name: user.name });
     }
     res.json(generic);
   }));
 
-  const tokenRow = (token: string) => db.prepare(
+  const tokenRow = async (token: string) => await db.prepare(
     `SELECT t.token_hash, t.user_id, t.purpose, t.expires_at, t.used_at, u.name, u.email, u.is_active
        FROM password_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ?`,
   ).get(sha256(token)) as
     | { token_hash: string; user_id: number; purpose: 'reset' | 'invite'; expires_at: string; used_at: string | null; name: string; email: string; is_active: number }
     | undefined;
 
-  const validToken = (token: string) => {
-    const row = tokenRow(token);
+  const validToken = async (token: string) => {
+    const row = await tokenRow(token);
     if (!row || row.used_at || row.expires_at <= nowIso() || !row.is_active) return null;
     return row;
   };
 
-  r.post('/reset/check', (req, res) => {
+  r.post('/reset/check', ah(async (req, res) => {
     if (resetByIp.hit(req.ip ?? 'unknown')) throw new HttpError(429, 'Too many requests. Please wait a few minutes.');
     const { token } = z.object({ token: z.string().min(10).max(200) }).parse(req.body);
-    const row = validToken(token);
+    const row = await validToken(token);
     if (!row) throw new HttpError(400, 'This link is invalid or has expired. Request a new one.');
     res.json({ purpose: row.purpose, name: row.name, email: row.email });
-  });
+  }));
 
   r.post('/reset', ah(async (req, res) => {
     if (resetByIp.hit(req.ip ?? 'unknown')) throw new HttpError(429, 'Too many requests. Please wait a few minutes.');
     const body = z.object({ token: z.string().min(10).max(200), password: z.string().max(200) }).parse(req.body);
-    const row = validToken(body.token);
+    const row = await validToken(body.token);
     if (!row) throw new HttpError(400, 'This link is invalid or has expired. Request a new one.');
     const problem = passwordProblems(body.password, config.auth.minPasswordLength);
     if (problem) throw new HttpError(400, problem, { field: 'password' });
     const hash = await hashPassword(body.password);
-    transaction(db, () => {
-      db.prepare('UPDATE password_tokens SET used_at = ? WHERE token_hash = ?').run(nowIso(), row.token_hash);
-      db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0, failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?')
+    await transaction(db, async () => {
+      await db.prepare('UPDATE password_tokens SET used_at = ? WHERE token_hash = ?').run(nowIso(), row.token_hash);
+      await db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0, failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?')
         .run(hash, nowIso(), row.user_id);
-      revokeUserSessions(db, row.user_id);
+      await revokeUserSessions(db, row.user_id);
     });
-    audit(db, req, {
+    await audit(db, req, {
       action: row.purpose === 'invite' ? 'auth.invite_accepted' : 'auth.password_reset',
       summary: row.purpose === 'invite' ? 'Accepted invitation and set password' : 'Password reset completed',
       entityType: 'user', entityId: row.user_id,
@@ -170,7 +161,7 @@ export function authRoutes(db: DB, mailer: Mailer) {
 
   r.post('/change-password', requireAuth, ah(async (req, res) => {
     const body = z.object({ currentPassword: z.string().max(200), newPassword: z.string().max(200) }).parse(req.body);
-    const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user!.id) as { password_hash: string | null };
+    const user = await db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user!.id) as { password_hash: string | null };
     if (!(await verifyPassword(body.currentPassword, user.password_hash))) {
       throw new HttpError(400, 'Your current password is incorrect.', { field: 'currentPassword' });
     }
@@ -178,14 +169,14 @@ export function authRoutes(db: DB, mailer: Mailer) {
       ? 'Choose a password different from your current one.'
       : passwordProblems(body.newPassword, config.auth.minPasswordLength);
     if (problem) throw new HttpError(400, problem, { field: 'newPassword' });
-    db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = ? WHERE id = ?').run(await hashPassword(body.newPassword), nowIso(), req.user!.id);
-    revokeUserSessions(db, req.user!.id, req.sessionTokenHash);
-    audit(db, req, { action: 'auth.password_changed', summary: 'Changed password; other sessions signed out', entityType: 'user', entityId: req.user!.id });
+    await db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = ? WHERE id = ?').run(await hashPassword(body.newPassword), nowIso(), req.user!.id);
+    await revokeUserSessions(db, req.user!.id, req.sessionTokenHash);
+    await audit(db, req, { action: 'auth.password_changed', summary: 'Changed password; other sessions signed out', entityType: 'user', entityId: req.user!.id });
     res.json({ ok: true });
   }));
 
-  r.get('/sessions', requireAuth, (req, res) => {
-    const rows = db.prepare(
+  r.get('/sessions', requireAuth, ah(async (req, res) => {
+    const rows = await db.prepare(
       'SELECT token_hash, created_at, last_seen_at, expires_at, remember, ip, user_agent FROM sessions WHERE user_id = ? ORDER BY last_seen_at DESC',
     ).all(req.user!.id) as { token_hash: string; created_at: string; last_seen_at: string; expires_at: string; remember: number; ip: string | null; user_agent: string | null }[];
     res.json({
@@ -194,13 +185,13 @@ export function authRoutes(db: DB, mailer: Mailer) {
         expiresAt: s.expires_at, remember: !!s.remember, ip: s.ip, userAgent: s.user_agent,
       })),
     });
-  });
+  }));
 
-  r.post('/sessions/revoke-others', requireAuth, (req, res) => {
-    revokeUserSessions(db, req.user!.id, req.sessionTokenHash);
-    audit(db, req, { action: 'auth.sessions_revoked', summary: 'Signed out all other sessions', entityType: 'user', entityId: req.user!.id });
+  r.post('/sessions/revoke-others', requireAuth, ah(async (req, res) => {
+    await revokeUserSessions(db, req.user!.id, req.sessionTokenHash);
+    await audit(db, req, { action: 'auth.sessions_revoked', summary: 'Signed out all other sessions', entityType: 'user', entityId: req.user!.id });
     res.json({ ok: true });
-  });
+  }));
 
   return r;
 }

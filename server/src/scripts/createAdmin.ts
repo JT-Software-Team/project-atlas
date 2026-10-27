@@ -5,15 +5,14 @@
  * ATLAS_ADMIN_EMAIL may be an email address or a user ID such as `atlas@admin`.
  * An existing account is never changed unless `-- --reset` is passed.
  */
-import path from 'node:path';
 import readline from 'node:readline/promises';
-import { config } from '../config.js';
+import { config, databaseTarget } from '../config.js';
 import { openDatabase } from '../db/index.js';
 import { provisionSuperAdmin } from '../auth/provision.js';
 import { ensureReferenceData } from './referenceData.js';
 
-const db = openDatabase(path.join(config.dataDir, 'atlas.db'));
-ensureReferenceData(db);
+const db = await openDatabase(databaseTarget());
+await ensureReferenceData(db);
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const ask = async (q: string, env?: string) => (env ? env : (await rl.question(q)).trim());

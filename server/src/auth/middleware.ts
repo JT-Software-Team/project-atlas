@@ -7,12 +7,13 @@ import type { Role } from './types.js';
 
 export function sessionMiddleware(db: DB) {
   return (req: Request, _res: Response, next: NextFunction) => {
-    const session = loadSession(db, req.cookies?.[config.session.cookieName]);
-    if (session) {
-      req.user = session.user;
-      req.sessionTokenHash = session.tokenHash;
-    }
-    next();
+    loadSession(db, req.cookies?.[config.session.cookieName]).then((session) => {
+      if (session) {
+        req.user = session.user;
+        req.sessionTokenHash = session.tokenHash;
+      }
+      next();
+    }, next);
   };
 }
 

@@ -1,6 +1,6 @@
 /**
  * Versioned schema migrations. Append new entries; never edit an applied one.
- * Each migration runs inside a transaction and bumps PRAGMA user_version.
+ * Each migration runs inside a transaction; the applied version is recorded in the schema_version table.
  */
 export const migrations: string[] = [
   /* 1 — initial schema */ `
@@ -210,5 +210,11 @@ export const migrations: string[] = [
   `,
   /* 2 — accounts provisioned with an initial password must choose a new one at first sign-in */ `
   ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0;
+  `,
+  /* 3 — file contents live in the database so every server instance sees the same uploads */ `
+  CREATE TABLE media_files (
+    name TEXT PRIMARY KEY,
+    data BLOB NOT NULL
+  );
   `,
 ];

@@ -11,11 +11,11 @@ export function slugify(input: string): string {
 }
 
 /** Return `base`, or `base-2`, `base-3`… whichever is free in the given table. */
-export function uniqueSlug(db: DB, table: 'projects' | 'clients' | 'categories', base: string, exceptId?: number): string {
+export async function uniqueSlug(db: DB, table: 'projects' | 'clients' | 'categories', base: string, exceptId?: number): Promise<string> {
   const stmt = db.prepare(`SELECT id FROM ${table} WHERE slug = ?`);
   let candidate = base;
   for (let i = 2; ; i++) {
-    const row = stmt.get(candidate) as { id: number } | undefined;
+    const row = await stmt.get(candidate) as { id: number } | undefined;
     if (!row || row.id === exceptId) return candidate;
     candidate = `${base}-${i}`;
   }

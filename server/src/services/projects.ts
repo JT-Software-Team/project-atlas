@@ -18,16 +18,20 @@ export interface ProjectRow {
   // joined
   category_name: string | null; category_slug: string | null;
   client_name: string | null; client_slug: string | null; client_placeholder: number | null; client_logo: number | null;
-  client_industry: string | null; client_website: string | null;
+  client_industry: string | null; client_website: string | null; cover_stored: string | null; client_logo_stored: string | null;
   dashboard_count: number; primary_dashboard_id: number | null; primary_dashboard_open_in: string | null;
   is_favorite: number; last_accessed_at: string | null; updated_by_name: string | null;
 }
+
+/** SQL expression for the stored name of the media row whose id is `column`. */
+export const storedNameOf = (column: string) => `(SELECT m.stored_name FROM media m WHERE m.id = ${column})`;
 
 const BASE_SELECT = `
   SELECT p.*,
     c.name AS category_name, c.slug AS category_slug,
     cl.name AS client_name, cl.slug AS client_slug, cl.is_placeholder AS client_placeholder,
     cl.logo_media_id AS client_logo, cl.industry AS client_industry, cl.website AS client_website,
+    ${storedNameOf('p.cover_media_id')} AS cover_stored, ${storedNameOf('cl.logo_media_id')} AS client_logo_stored,
     (SELECT COUNT(*) FROM dashboards d WHERE d.project_id = p.id) AS dashboard_count,
     (SELECT d.id FROM dashboards d WHERE d.project_id = p.id ORDER BY d.is_primary DESC, d.sort_order LIMIT 1) AS primary_dashboard_id,
     (SELECT d.open_in FROM dashboards d WHERE d.project_id = p.id ORDER BY d.is_primary DESC, d.sort_order LIMIT 1) AS primary_dashboard_open_in,
@@ -45,9 +49,9 @@ export interface ProjectWithAccess {
 }
 
 /** All projects the user may view, with their computed access. Permission filtering happens here, server-side. */
-export function accessibleProjects(db: DB, user: SessionUser, opts: { includeArchived?: boolean } = {}): ProjectWithAccess[] {
-  const rows = db.prepare(`${BASE_SELECT} ORDER BY p.updated_at DESC`).all({ uid: user.id }) as unknown as ProjectRow[];
-  const grants = loadGrants(db, user.id);
+export async function accessibleProjects(db: DB, user: SessionUser, opts: { includeArchived?: boolean } = {}): Promise<ProjectWithAccess[]> {
+  const rows = await db.prepare(`${BASE_SELECT} ORDER BY p.updated_at DESC`).all({ uid: user.id }) as unknown as ProjectRow[];
+  const grants = await loadGrants(db, user.id);
   const out: ProjectWithAccess[] = [];
   for (const row of rows) {
     const access = accessFor(user, row, grants);
@@ -58,17 +62,32 @@ export function accessibleProjects(db: DB, user: SessionUser, opts: { includeArc
   return out;
 }
 
-export function findProject(db: DB, user: SessionUser, idOrSlug: string | number): ProjectWithAccess | null {
+export async function findProject(db: DB, user: SessionUser, idOrSlug: string | number): Promise<ProjectWithAccess | null> {
   const byId = typeof idOrSlug === 'number' || /^\d+$/.test(String(idOrSlug));
-  const row = db.prepare(`${BASE_SELECT} WHERE ${byId ? 'p.id' : 'p.slug'} = :key`)
+  const row = await db.prepare(`${BASE_SELECT} WHERE ${byId ? 'p.id' : 'p.slug'} = :key`)
     .get({ uid: user.id, key: byId ? Number(idOrSlug) : String(idOrSlug) }) as unknown as ProjectRow | undefined;
   if (!row) return null;
-  const access = accessFor(user, row, loadGrants(db, user.id));
+  const access = accessFor(user, row, await loadGrants(db, user.id));
   return access.view ? { row, access } : null;
 }
 
-export const mediaUrl = (id: number | null | undefined, thumb = false) =>
-  id ? `/api/media/${id}${thumb ? '?size=thumb' : ''}` : null;
+/** Version token for a stored file: part of its random, never-reused name. */
+export const mediaVersion = (storedName: string | null | undefined) => (storedName ? storedName.slice(0, 16) : null);
+
+/**
+ * URL of an uploaded file. With the stored name, the URL carries a version and can be cached forever:
+ * a different upload always gets a different URL, so browsers never show a stale image.
+ */
+export const mediaUrl = (id: number | null | undefined, thumb = false, storedName?: string | null) => {
+  if (!id) return null;
+  const params = new URLSearchParams();
+  if (thumb) params.set('size', 'thumb');
+  const v = mediaVersion(storedName);
+  if (v) params.set('v', v);
+  const qs = params.toString();
+  return `/api/media/${id}${qs ? `?${qs}` : ''}`;
+};
+
 
 function location(row: ProjectRow, access: ProjectAccess) {
   if (!row.location_approved && !access.technical) return null;
@@ -90,10 +109,10 @@ export function toCard({ row, access }: ProjectWithAccess) {
     isDemo: !!row.is_demo,
     tags: safeJsonArray(row.tags),
     client: row.client_id
-      ? { id: row.client_id, name: row.client_name, slug: row.client_slug, isPlaceholder: !!row.client_placeholder, logoUrl: mediaUrl(row.client_logo, true) }
+      ? { id: row.client_id, name: row.client_name, slug: row.client_slug, isPlaceholder: !!row.client_placeholder, logoUrl: mediaUrl(row.client_logo, true, row.client_logo_stored) }
       : null,
     location: location(row, access),
-    coverUrl: mediaUrl(row.cover_media_id, true),
+    coverUrl: mediaUrl(row.cover_media_id, true, row.cover_stored),
     dashboardCount: row.dashboard_count,
     primaryDashboard: row.primary_dashboard_id
       ? { id: row.primary_dashboard_id, openIn: row.primary_dashboard_open_in, launchUrl: `/api/dashboards/${row.primary_dashboard_id}/open` }
@@ -112,12 +131,12 @@ interface DashboardRow {
   id: number; name: string; url: string; type: string; description: string | null; is_primary: number;
   open_in: string; thumbnail_media_id: number | null; provider: string | null; requires_separate_login: number;
   last_verified_at: string | null; check_result: string | null; check_detail: string | null; sort_order: number;
-  verified_by_name: string | null;
+  verified_by_name: string | null; thumb_stored: string | null;
 }
 
-export function projectDashboards(db: DB, projectId: number, includeUrl: boolean) {
-  const rows = db.prepare(
-    `SELECT d.*, u.name AS verified_by_name FROM dashboards d LEFT JOIN users u ON u.id = d.last_verified_by
+export async function projectDashboards(db: DB, projectId: number, includeUrl: boolean) {
+  const rows = await db.prepare(
+    `SELECT d.*, u.name AS verified_by_name, ${storedNameOf('d.thumbnail_media_id')} AS thumb_stored FROM dashboards d LEFT JOIN users u ON u.id = d.last_verified_by
      WHERE d.project_id = ? ORDER BY d.sort_order, d.id`,
   ).all(projectId) as unknown as DashboardRow[];
   return rows.map((d) => {
@@ -135,7 +154,7 @@ export function projectDashboards(db: DB, projectId: number, includeUrl: boolean
       url: includeUrl ? d.url : undefined,
       launchUrl: `/api/dashboards/${d.id}/open`,
       requiresSeparateLogin: !!d.requires_separate_login,
-      thumbnailUrl: mediaUrl(d.thumbnail_media_id, true),
+      thumbnailUrl: mediaUrl(d.thumbnail_media_id, true, d.thumb_stored),
       thumbnailMediaId: includeUrl ? d.thumbnail_media_id : undefined,
       lastVerifiedAt: d.last_verified_at,
       lastVerifiedBy: d.verified_by_name,
@@ -145,34 +164,34 @@ export function projectDashboards(db: DB, projectId: number, includeUrl: boolean
   });
 }
 
-function mediaInfo(db: DB, id: number | null) {
+async function mediaInfo(db: DB, id: number | null) {
   if (!id) return null;
-  const m = db.prepare('SELECT id, kind, original_name, size, width, height FROM media WHERE id = ?').get(id) as
-    { id: number; kind: string; original_name: string; size: number; width: number | null; height: number | null } | undefined;
+  const m = await db.prepare('SELECT id, kind, stored_name, original_name, size, width, height FROM media WHERE id = ?').get(id) as
+    { id: number; kind: string; stored_name: string; original_name: string; size: number; width: number | null; height: number | null } | undefined;
   if (!m) return null;
   return {
     id: m.id, kind: m.kind, name: m.original_name, size: m.size, width: m.width, height: m.height,
-    url: mediaUrl(m.id), thumbUrl: m.kind === 'image' ? mediaUrl(m.id, true) : null,
+    url: mediaUrl(m.id, false, m.stored_name), thumbUrl: m.kind === 'image' ? mediaUrl(m.id, true, m.stored_name) : null,
   };
 }
 
 /** Full representation for the details page and the edit form, filtered by access level. */
-export function toDetail(db: DB, pa: ProjectWithAccess) {
+export async function toDetail(db: DB, pa: ProjectWithAccess) {
   const { row, access } = pa;
-  const gallery = (db.prepare(
+  const galleryRows = await db.prepare(
     'SELECT media_id, caption FROM project_gallery WHERE project_id = ? ORDER BY sort_order',
-  ).all(row.id) as { media_id: number; caption: string | null }[])
-    .map((g) => ({ ...mediaInfo(db, g.media_id)!, caption: g.caption }))
+  ).all(row.id) as { media_id: number; caption: string | null }[];
+  const gallery = (await Promise.all(galleryRows.map(async (g) => ({ ...(await mediaInfo(db, g.media_id))!, caption: g.caption }))))
     .filter((g) => g.id);
 
   const owner = row.owner_user_id
-    ? (db.prepare('SELECT id, name FROM users WHERE id = ?').get(row.owner_user_id) as { id: number; name: string } | undefined)
+    ? (await db.prepare('SELECT id, name FROM users WHERE id = ?').get(row.owner_user_id) as { id: number; name: string } | undefined)
     : undefined;
   const showContact = access.technical || !!row.contact_approved;
 
   return {
     ...toCard(pa),
-    coverUrl: mediaUrl(row.cover_media_id),
+    coverUrl: mediaUrl(row.cover_media_id, false, row.cover_stored),
     description: row.description,
     startDate: row.start_date,
     completionDate: row.completion_date,
@@ -180,15 +199,15 @@ export function toDetail(db: DB, pa: ProjectWithAccess) {
     client: row.client_id
       ? {
         id: row.client_id, name: row.client_name, slug: row.client_slug, isPlaceholder: !!row.client_placeholder,
-        logoUrl: mediaUrl(row.client_logo), industry: row.client_industry, website: row.client_website,
+        logoUrl: mediaUrl(row.client_logo, false, row.client_logo_stored), industry: row.client_industry, website: row.client_website,
       }
       : null,
-    dashboards: projectDashboards(db, row.id, access.manage),
+    dashboards: await projectDashboards(db, row.id, access.manage),
     media: {
-      cover: mediaInfo(db, row.cover_media_id),
-      plant: mediaInfo(db, row.plant_media_id),
-      equipment: mediaInfo(db, row.equipment_media_id),
-      document: mediaInfo(db, row.document_media_id),
+      cover: await mediaInfo(db, row.cover_media_id),
+      plant: await mediaInfo(db, row.plant_media_id),
+      equipment: await mediaInfo(db, row.equipment_media_id),
+      document: await mediaInfo(db, row.document_media_id),
       gallery,
     },
     technical: access.technical ? safeJsonObject(row.technical) : null,

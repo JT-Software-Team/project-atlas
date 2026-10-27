@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { requireAuth } from '../auth/middleware.js';
 import type { SessionUser } from '../auth/types.js';
 import type { DB } from '../db/index.js';
-import { HttpError } from '../http.js';
+import { ah, HttpError } from '../http.js';
 import { safeJsonObject } from '../services/permissions.js';
 import { accessibleProjects, mediaUrl, toCard, type ProjectWithAccess } from '../services/projects.js';
 
@@ -15,17 +15,17 @@ interface AuditRow {
 }
 
 /** Audit entries a user may see: everything for Super Admins, project events of visible projects otherwise. */
-function visibleActivity(db: DB, user: SessionUser, projects: ProjectWithAccess[], limit: number, projectId?: number) {
+async function visibleActivity(db: DB, user: SessionUser, projects: ProjectWithAccess[], limit: number, projectId?: number) {
   if (user.role === 'super_admin') {
     const rows = projectId
-      ? db.prepare('SELECT * FROM audit_log WHERE project_id = ? ORDER BY id DESC LIMIT ?').all(projectId, limit)
-      : db.prepare('SELECT * FROM audit_log ORDER BY id DESC LIMIT ?').all(limit);
+      ? await db.prepare('SELECT * FROM audit_log WHERE project_id = ? ORDER BY id DESC LIMIT ?').all(projectId, limit)
+      : await db.prepare('SELECT * FROM audit_log ORDER BY id DESC LIMIT ?').all(limit);
     return rows as unknown as AuditRow[];
   }
   const access = new Map(projects.map((p) => [p.row.id, p.access]));
   const ids = projectId ? [projectId].filter((id) => access.has(id)) : [...access.keys()];
-  if (!ids.length) return [];
-  const rows = db.prepare(
+  if (!ids.length) return [] as AuditRow[];
+  const rows = await db.prepare(
     `SELECT * FROM audit_log WHERE project_id IN (${ids.map(() => '?').join(',')}) ORDER BY id DESC LIMIT ?`,
   ).all(...ids, limit * 4) as unknown as AuditRow[];
   return rows.filter((a) => {
@@ -45,8 +45,8 @@ export function overviewRoutes(db: DB) {
   const r = Router();
   r.use(requireAuth);
 
-  r.get('/overview', (req, res) => {
-    const projects = accessibleProjects(db, req.user!);
+  r.get('/overview', ah(async (req, res) => {
+    const projects = await accessibleProjects(db, req.user!);
     const count = (status: string) => projects.filter((p) => p.row.status === status).length;
     const since = new Date(Date.now() - 30 * DAY).toISOString();
     res.json({
@@ -64,12 +64,12 @@ export function overviewRoutes(db: DB) {
       featured: projects.filter((p) => p.row.featured).slice(0, 6).map(toCard),
       recentlyAccessed: projects.filter((p) => p.row.last_accessed_at)
         .sort((a, b) => b.row.last_accessed_at!.localeCompare(a.row.last_accessed_at!)).slice(0, 5).map(toCard),
-      activity: visibleActivity(db, req.user!, projects, 12).map(toActivity),
+      activity: (await visibleActivity(db, req.user!, projects, 12)).map(toActivity),
     });
-  });
+  }));
 
-  r.get('/notifications', (req, res) => {
-    const projects = accessibleProjects(db, req.user!);
+  r.get('/notifications', ah(async (req, res) => {
+    const projects = await accessibleProjects(db, req.user!);
     const today = new Date().toISOString().slice(0, 10);
     const soon = new Date(Date.now() + 14 * DAY).toISOString().slice(0, 10);
     const items: { id: string; tone: 'warning' | 'info' | 'error'; title: string; detail: string; projectSlug?: string }[] = [];
@@ -90,33 +90,33 @@ export function overviewRoutes(db: DB) {
       }
     }
     res.json({ notifications: items });
-  });
+  }));
 
-  r.get('/activity', (req, res) => {
+  r.get('/activity', ah(async (req, res) => {
     const q = z.object({
       projectId: z.coerce.number().int().positive().optional(),
       limit: z.coerce.number().int().min(1).max(500).default(100),
       action: z.string().max(40).optional(),
     }).parse(req.query);
-    const projects = accessibleProjects(db, req.user!, { includeArchived: true });
+    const projects = await accessibleProjects(db, req.user!, { includeArchived: true });
     if (req.user!.role !== 'super_admin' && !q.projectId && req.user!.role !== 'project_admin') {
       throw new HttpError(403, 'You do not have permission to view the activity log.');
     }
-    let rows = visibleActivity(db, req.user!, projects, q.action ? q.limit * 5 : q.limit, q.projectId);
+    let rows = await visibleActivity(db, req.user!, projects, q.action ? q.limit * 5 : q.limit, q.projectId);
     if (q.action) rows = rows.filter((a) => a.action.startsWith(q.action!)).slice(0, q.limit);
     res.json({
       activity: rows.map((a) => ({ ...toActivity(a), ip: req.user!.role === 'super_admin' ? a.ip : undefined })),
     });
-  });
+  }));
 
   /** Documents and reference links across every project the user can see. */
-  r.get('/resources', (req, res) => {
-    const projects = accessibleProjects(db, req.user!);
+  r.get('/resources', ah(async (req, res) => {
+    const projects = await accessibleProjects(db, req.user!);
     const resources: { projectId: number; projectSlug: string; projectName: string; clientName: string | null; kind: string; title: string; url: string; size?: number }[] = [];
     for (const { row, access } of projects) {
       if (row.document_media_id) {
-        const m = db.prepare('SELECT original_name, size FROM media WHERE id = ?').get(row.document_media_id) as { original_name: string; size: number } | undefined;
-        if (m) resources.push({ projectId: row.id, projectSlug: row.slug, projectName: row.name, clientName: row.client_name, kind: 'document', title: m.original_name, url: mediaUrl(row.document_media_id)!, size: m.size });
+        const m = await db.prepare('SELECT stored_name, original_name, size FROM media WHERE id = ?').get(row.document_media_id) as { stored_name: string; original_name: string; size: number } | undefined;
+        if (m) resources.push({ projectId: row.id, projectSlug: row.slug, projectName: row.name, clientName: row.client_name, kind: 'document', title: m.original_name, url: mediaUrl(row.document_media_id, false, m.stored_name)!, size: m.size });
       }
       const docUrl = access.technical ? safeJsonObject(row.technical).documentationUrl : undefined;
       if (docUrl && /^https:\/\//i.test(docUrl)) {
@@ -124,7 +124,7 @@ export function overviewRoutes(db: DB) {
       }
     }
     res.json({ resources });
-  });
+  }));
 
   return r;
 }

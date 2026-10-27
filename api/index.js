@@ -1,62 +1,78 @@
-import path from 'node:path';
-import os from 'node:os';
-import fs from 'node:fs';
 import { createApp } from '../server/dist/app.js';
-import { config } from '../server/dist/config.js';
+import { config, databaseTarget, validateProductionConfig } from '../server/dist/config.js';
 import { openDatabase } from '../server/dist/db/index.js';
 import { OutboxMailer } from '../server/dist/services/mailer.js';
 import { ensureReferenceData } from '../server/dist/scripts/referenceData.js';
 import { insertDemoProjects } from '../server/dist/scripts/demoData.js';
 import { provisionSuperAdmin } from '../server/dist/auth/provision.js';
+import { verifyPassword } from '../server/dist/auth/passwords.js';
 
-let appInstance = null;
+let appPromise = null;
 
-async function getApp() {
-  if (appInstance) return appInstance;
+/**
+ * Bootstrap the Super Admin from ATLAS_ADMIN_EMAIL / ATLAS_ADMIN_PASSWORD (Vercel environment variables;
+ * there is deliberately no default). An existing account is left alone, so a password changed in the
+ * portal stays changed. Set ATLAS_ADMIN_RESET=true temporarily to restore access with the configured
+ * password, then remove it again.
+ */
+async function bootstrapSuperAdmin(db) {
+  const loginId = (process.env.ATLAS_ADMIN_EMAIL || process.env.ATLAS_ADMIN_LOGIN_ID || '').trim().toLowerCase();
+  const password = process.env.ATLAS_ADMIN_PASSWORD || '';
+  const name = process.env.ATLAS_ADMIN_NAME || 'Atlas Super Admin';
+  if (!loginId || !password) {
+    const { n } = await db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'super_admin' AND is_active = 1`).get();
+    if (n === 0) console.warn('No active Super Admin exists. Set ATLAS_ADMIN_EMAIL and ATLAS_ADMIN_PASSWORD to create one.');
+    return;
+  }
+  const reset = process.env.ATLAS_ADMIN_RESET === 'true';
+  if (reset) {
+    const row = await db.prepare('SELECT password_hash, role, is_active FROM users WHERE email = ?').get(loginId);
+    const current = row && row.role === 'super_admin' && row.is_active && await verifyPassword(password, row.password_hash);
+    if (current) return; // nothing to restore; avoids signing the admin out on every cold start
+  }
+  const result = await provisionSuperAdmin(db, { loginId, name, password, reset, mustChangePassword: false }, config.auth.minPasswordLength);
+  if (result !== 'exists') console.info(`Super Admin ${result === 'created' ? 'created' : 'restored'} from environment variables.`);
+}
 
-  const dbPath = path.join(os.tmpdir(), 'atlas.db');
-  const isNew = !fs.existsSync(dbPath);
-  const db = openDatabase(dbPath);
-  ensureReferenceData(db);
-  if (isNew) insertDemoProjects(db);
+async function createAppInstance() {
+  // Refuse to run without a shared hosted database and a strong session secret.
+  validateProductionConfig({ isServerless: true });
 
-  // Initial Super Admin from environment variables, with safe permanent fallback.
-  const adminLoginId = process.env.ATLAS_ADMIN_EMAIL || process.env.ATLAS_ADMIN_LOGIN_ID || 'admin@atlas';
-  const adminPassword = process.env.ATLAS_ADMIN_PASSWORD || 'AtlasAdmin@123';
-  const adminName = process.env.ATLAS_ADMIN_NAME || 'Atlas Super Admin';
+  const db = await openDatabase(databaseTarget());
+  await ensureReferenceData(db);
+
+  // Seed the demo projects only into a brand-new database, so deleted demo records stay deleted.
+  const { n: projects } = await db.prepare('SELECT COUNT(*) AS n FROM projects').get();
+  const { n: events } = await db.prepare('SELECT COUNT(*) AS n FROM audit_log').get();
+  if (projects === 0 && events === 0) await insertDemoProjects(db);
+
   try {
-    await provisionSuperAdmin(db, {
-      loginId: adminLoginId,
-      name: adminName,
-      password: adminPassword,
-      reset: true,
-      mustChangePassword: false,
-    }, config.auth.minPasswordLength);
-
-    // Also provision admin@atlas.local with the exact same password and no required change
-    // so both admin handles work seamlessly and permanently.
-    if (adminLoginId !== 'admin@atlas.local') {
-      try {
-        await provisionSuperAdmin(db, {
-          loginId: 'admin@atlas.local',
-          name: adminName,
-          password: adminPassword,
-          reset: true,
-          mustChangePassword: false,
-        }, config.auth.minPasswordLength);
-      } catch {
-        // ignore
-      }
-    }
+    await bootstrapSuperAdmin(db);
   } catch (err) {
     console.error(`Super Admin provisioning skipped: ${err.message}`);
   }
 
-  appInstance = createApp({ db, mailer: new OutboxMailer() });
-  return appInstance;
+  return createApp({ db, mailer: new OutboxMailer() });
 }
 
 export default async function handler(req, res) {
-  const app = await getApp();
-  return app(req, res);
+  try {
+    if (!appPromise) {
+      appPromise = createAppInstance().catch((err) => {
+        appPromise = null; // retry on the next request instead of caching the failure
+        throw err;
+      });
+    }
+    const app = await appPromise;
+    return app(req, res);
+  } catch (err) {
+    // Details (variable names only, never values) go to the function logs, not to visitors.
+    console.error(`Fatal startup error: ${err.message}`);
+    res.statusCode = 503;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.end(JSON.stringify({
+      error: 'Project Atlas is not configured correctly. An administrator must check the deployment settings (see docs/DEPLOYMENT.md).',
+    }));
+  }
 }

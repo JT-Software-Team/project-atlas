@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, Pencil, Plus, Shapes, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, HardDrive, Pencil, Plus, Shapes, Trash2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { api, ApiError, qs } from '../../lib/api';
-import { formatDateTime } from '../../lib/format';
+import { formatBytes, formatDateTime } from '../../lib/format';
 import type { Activity, Category } from '../../lib/types';
 import { useToast } from '../../components/Toast';
 import { Alert, ConfirmDialog, ErrorState, Field, Modal, PageHeader, Spinner } from '../../components/ui';
@@ -115,17 +115,61 @@ function ActivityTab() {
   );
 }
 
+interface Usage {
+  storage: { bytes: number; files: number; limitBytes: number };
+  records: { projects: number; clients: number; users: number; media: number; dashboards: number; auditEvents: number };
+  database: 'hosted' | 'local';
+}
+
+/** Stored file size against the upload limit, so the free hosting quota is never a surprise. */
+function UsageTab() {
+  const { data, error, loading, reload } = useApi<Usage>('/media/usage');
+  if (error) return <ErrorState error={error} onRetry={reload} />;
+  if (loading || !data) return <div className="skeleton" style={{ height: 180 }} />;
+  const { storage, records } = data;
+  const pct = Math.min(100, Math.round((storage.bytes / storage.limitBytes) * 100));
+  const tone = pct >= 90 ? 'var(--error)' : pct >= 75 ? 'var(--warning)' : 'var(--cyan)';
+  return (
+    <section className="panel">
+      <div className="panel-header"><h2><HardDrive size={18} />Storage &amp; usage</h2></div>
+      <p className="muted" style={{ marginBottom: 6 }}>
+        Uploaded files: <strong style={{ color: 'var(--text)' }}>{formatBytes(storage.bytes)}</strong> of {formatBytes(storage.limitBytes)} upload limit ({pct}%), {storage.files} stored files.
+      </p>
+      <div role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label="File storage used"
+        style={{ height: 8, borderRadius: 999, background: 'var(--panel-2)', overflow: 'hidden', margin: '10px 0 18px' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: tone, transition: 'width 0.4s var(--ease)' }} />
+      </div>
+      {pct >= 75 && (
+        <div style={{ marginBottom: 16 }}>
+          <Alert tone="warning">Storage is filling up. Remove unused images, or review the plan limits in docs/OPERATIONS.md before raising the limit.</Alert>
+        </div>
+      )}
+      <div className="stats" style={{ marginBottom: 12 }}>
+        {Object.entries({ Projects: records.projects, Clients: records.clients, Users: records.users, 'Files (media records)': records.media, Dashboards: records.dashboards, 'Audit events': records.auditEvents })
+          .map(([label, value]) => (
+            <div className="stat" key={label}><div className="stat-top">{label}</div><div className="stat-value">{value}</div></div>
+          ))}
+      </div>
+      <p className="subtle">
+        Database: {data.database === 'hosted' ? 'hosted (shared by all server instances)' : 'local file'}. Request, bandwidth and row quotas are shown in the Vercel and Turso dashboards.
+      </p>
+    </section>
+  );
+}
+
 export function SettingsPage() {
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'activity' ? 'activity' : 'categories';
+  const requested = params.get('tab');
+  const tab = requested === 'activity' || requested === 'usage' ? requested : 'categories';
   return (
     <>
       <PageHeader eyebrow="Administration" title="Settings" description="Manage reference data and review administrative activity." />
       <div className="tabs" role="tablist" style={{ marginBottom: 18, width: 'fit-content' }}>
         <button className="tab" role="tab" aria-selected={tab === 'categories'} onClick={() => setParams({ tab: 'categories' })}>Categories</button>
         <button className="tab" role="tab" aria-selected={tab === 'activity'} onClick={() => setParams({ tab: 'activity' })}>Activity log</button>
+        <button className="tab" role="tab" aria-selected={tab === 'usage'} onClick={() => setParams({ tab: 'usage' })}>Storage &amp; usage</button>
       </div>
-      {tab === 'categories' ? <CategoriesTab /> : <ActivityTab />}
+      {tab === 'categories' ? <CategoriesTab /> : tab === 'activity' ? <ActivityTab /> : <UsageTab />}
     </>
   );
 }

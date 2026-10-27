@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { DB } from '../db/index.js';
+import { ah } from '../http.js';
 
 /**
  * Unauthenticated, non-confidential overview for the company website.
@@ -8,8 +9,8 @@ import type { DB } from '../db/index.js';
  */
 export function publicRoutes(db: DB) {
   const r = Router();
-  r.get('/projects', (_req, res) => {
-    const rows = db.prepare(
+  r.get('/projects', ah(async (_req, res) => {
+    const rows = await db.prepare(
       `SELECT p.slug, p.name, p.short_description, p.status, c.name AS category, cl.name AS client, cl.is_placeholder,
               CASE WHEN p.location_approved = 1 THEN p.city END AS city,
               CASE WHEN p.location_approved = 1 THEN p.country END AS country
@@ -26,6 +27,6 @@ export function publicRoutes(db: DB) {
         client: p.is_placeholder ? null : p.client, city: p.city, country: p.country,
       })),
     });
-  });
+  }));
   return r;
 }
