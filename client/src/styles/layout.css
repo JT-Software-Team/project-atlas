@@ -12,16 +12,16 @@
 /* ---------- App shell ---------- */
 .shell { position: relative; z-index: 1; min-height: 100vh; display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); transition: grid-template-columns 0.3s var(--ease); }
 .shell.collapsed { grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr); }
-.sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; background: var(--bg-2); border-right: 1px solid var(--border); padding: 16px 12px; gap: 6px; overflow: hidden; z-index: 40; }
+.sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; background: linear-gradient(180deg, #0A0E2A 0%, #070A1E 100%); border-right: 1px solid var(--border); box-shadow: 1px 0 30px -10px rgba(139, 92, 246, 0.25); padding: 16px 12px; gap: 6px; overflow: hidden; z-index: 40; }
 .sidebar-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 16px; border-bottom: 1px solid var(--border); margin-bottom: 8px; min-height: 60px; }
 .sidebar nav { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 2px; padding-right: 2px; }
 .nav-section { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); padding: 14px 12px 6px; white-space: nowrap; font-weight: 600; }
 .nav-link { position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 8px; color: var(--text-2); font-weight: 500; font-size: 0.9rem; text-decoration: none; white-space: nowrap; transition: background 0.15s, color 0.15s; }
 .nav-link svg { flex: none; }
 .nav-link:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); text-decoration: none; }
-.nav-link.active { color: var(--text); background: var(--panel-2); }
-.nav-link.active::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: var(--accent); }
-.nav-link.active svg { color: var(--accent-strong); }
+.nav-link.active { color: var(--text); background: linear-gradient(90deg, rgba(139, 92, 246, 0.22), rgba(34, 211, 238, 0.06)); box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.25); }
+.nav-link.active::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: linear-gradient(180deg, var(--accent), var(--cyan)); box-shadow: 0 0 10px var(--accent); }
+.nav-link.active svg { color: var(--cyan); }
 .sidebar-foot { border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.72rem; color: var(--text-3); }
 .collapsed .brand-text, .collapsed .nav-label, .collapsed .nav-section, .collapsed .sidebar-foot-text { display: none; }
 .collapsed .nav-link { justify-content: center; padding: 0; }
@@ -29,11 +29,11 @@
 .collapsed .logo-plate.sm { height: 28px; padding: 3px 5px; }
 
 .main { min-width: 0; display: flex; flex-direction: column; }
-.header { position: sticky; top: 0; z-index: 30; height: var(--header-h); display: flex; align-items: center; gap: 14px; padding: 0 28px; background: var(--bg); border-bottom: 1px solid var(--border); }
+.header { position: sticky; top: 0; z-index: 30; height: var(--header-h); display: flex; align-items: center; gap: 14px; padding: 0 28px; background: rgba(6, 9, 24, 0.78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
 .header-search { flex: 1; max-width: 520px; }
 .header-search .input { background: var(--panel); }
 .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.avatar { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 700; font-size: 0.85rem; flex: none; }
+.avatar { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; background: linear-gradient(135deg, #7C3AED, #22D3EE); color: #fff; font-weight: 700; font-size: 0.85rem; flex: none; }
 .user-btn { display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 4px; border-radius: 10px; border: 1px solid transparent; background: none; cursor: pointer; text-align: left; }
 .user-btn:hover { background: rgba(255, 255, 255, 0.04); border-color: var(--border); }
 .user-meta { display: flex; flex-direction: column; line-height: 1.2; }

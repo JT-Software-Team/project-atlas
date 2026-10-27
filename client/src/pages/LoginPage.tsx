@@ -51,7 +51,7 @@ export function LoginPage() {
   return (
     <AuthLayout>
       <form className="auth-form" onSubmit={submit} noValidate aria-describedby={formError ? 'login-error' : undefined}>
-        <div className="auth-form-header">
+        <div className="auth-form-header sr-only">
           <h2 className="auth-form-title">Sign in</h2>
           <p className="auth-form-desc">Use your authorised Janyutech account.</p>
         </div>
@@ -61,7 +61,7 @@ export function LoginPage() {
         <Field label="Email or user ID" error={errors.email}>
           {(p) => (
             <div className="input-wrap">
-              <UserRound size={17} aria-hidden="true" />
+              <UserRound size={19} aria-hidden="true" />
               <input
                 {...p}
                 className="input auth-input"
@@ -70,7 +70,7 @@ export function LoginPage() {
                 autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
-                placeholder="admin@atlas"
+                placeholder="Enter your email or user ID"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -81,7 +81,7 @@ export function LoginPage() {
         <Field label="Password" error={errors.password}>
           {(p) => (
             <div className="input-wrap">
-              <Lock size={17} aria-hidden="true" />
+              <Lock size={19} aria-hidden="true" />
               <input
                 {...p}
                 className="input auth-input"
@@ -90,7 +90,7 @@ export function LoginPage() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{ paddingRight: 46 }}
+                style={{ paddingRight: 50 }}
               />
               <button
                 type="button"
@@ -99,7 +99,7 @@ export function LoginPage() {
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 aria-pressed={showPassword}
               >
-                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
               </button>
             </div>
           )}
@@ -114,7 +114,7 @@ export function LoginPage() {
         </div>
 
         <button className="btn btn-primary btn-lg btn-block auth-submit-btn" type="submit" disabled={busy} aria-busy={busy}>
-          {busy ? <><Spinner /> Signing in…</> : <><KeyRound size={17} /> Sign in</>}
+          {busy ? <><Spinner /> Signing in…</> : <><KeyRound size={19} /> <span>Sign in</span></>}
         </button>
       </form>
     </AuthLayout>
