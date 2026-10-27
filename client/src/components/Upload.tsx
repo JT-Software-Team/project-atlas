@@ -7,6 +7,34 @@ import { Spinner } from './ui';
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
 const MAX_IMAGE = 8 * 1024 * 1024;
 const MAX_DOC = 20 * 1024 * 1024;
+/** Hosting rejects request bodies above ~4.5 MB, so larger photos are downscaled in the browser first. */
+const DIRECT_UPLOAD_LIMIT = 4 * 1024 * 1024;
+/** The server stores images at up to 2000px, so this leaves headroom without losing detail. */
+const DOWNSCALE_MAX_SIDE = 2400;
+
+/** Re-encode a large still image to fit under the upload limit; animated GIFs and small files pass through. */
+async function shrinkForUpload(file: File): Promise<File> {
+  if (file.size <= DIRECT_UPLOAD_LIMIT || file.type === 'image/gif' || typeof createImageBitmap !== 'function') return file;
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file; // let the server report the problem
+  }
+  const scale = Math.min(1, DOWNSCALE_MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  for (const quality of [0.9, 0.8, 0.7]) {
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+    if (blob && blob.size <= DIRECT_UPLOAD_LIMIT) {
+      return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+    }
+  }
+  return file;
+}
 
 export interface UploadValue { id: number; url: string; thumbUrl?: string | null; name?: string; size?: number }
 
@@ -41,7 +69,7 @@ export function MediaUpload({ label, kind = 'image', value, onChange, hint, cont
     const preview = kind === 'image' ? URL.createObjectURL(file) : undefined;
     setLocalPreview(preview);
     try {
-      const { media } = await api.upload(file, kind);
+      const { media } = await api.upload(kind === 'image' ? await shrinkForUpload(file) : file, kind);
       onChange(toValue(media));
     } catch (e) {
       setError((e as ApiError).message);

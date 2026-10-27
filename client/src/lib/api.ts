@@ -30,6 +30,7 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
   const isJson = res.headers.get('content-type')?.includes('application/json');
   if (!isJson) {
     if (res.status === 401 && !url.startsWith('/auth/')) unauthorizedListeners.forEach((fn) => fn());
+    if (res.status === 413) throw new ApiError(413, 'That file is too large to upload. Try a smaller file.');
     throw new ApiError(res.status || 502, `Server returned an invalid response (${res.status}).`);
   }
   const data = await res.json().catch(() => ({}));

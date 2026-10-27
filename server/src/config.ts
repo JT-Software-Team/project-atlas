@@ -1,7 +1,13 @@
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+/** Serverless bundles (Vercel) are read-only; only the OS temp directory is writable there. */
+const defaultDataDir = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'atlas-data')
+  : path.join(serverRoot, '..', 'data');
 
 function int(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -15,7 +21,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 export const config = {
   isProduction,
   port: int('PORT', 4000),
-  dataDir: path.resolve(process.env.ATLAS_DATA_DIR ?? path.join(serverRoot, '..', 'data')),
+  dataDir: path.resolve(process.env.ATLAS_DATA_DIR ?? defaultDataDir),
   /** Public base URL of the portal, used to build password-reset links. */
   appUrl: (process.env.ATLAS_APP_URL ?? 'http://localhost:5173').replace(/\/$/, ''),
   /** Set to false only for local HTTP development. Defaults to true in production. */
