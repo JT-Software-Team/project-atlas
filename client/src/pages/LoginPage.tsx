@@ -70,7 +70,7 @@ export function LoginPage() {
                 autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
-                placeholder="name@company.com"
+                placeholder="admin@atlas"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

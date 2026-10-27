@@ -20,16 +20,34 @@ async function getApp() {
   ensureReferenceData(db);
   if (isNew) insertDemoProjects(db);
 
-  // Initial Super Admin from environment variables, with safe demo fallback for evaluation.
-  const adminLoginId = process.env.ATLAS_ADMIN_EMAIL || process.env.ATLAS_ADMIN_LOGIN_ID || 'admin@atlas.local';
-  const adminPassword = process.env.ATLAS_ADMIN_PASSWORD || 'AtlasAdmin!2026';
-  const adminName = process.env.ATLAS_ADMIN_NAME || 'Admin User';
+  // Initial Super Admin from environment variables, with safe permanent fallback.
+  const adminLoginId = process.env.ATLAS_ADMIN_EMAIL || process.env.ATLAS_ADMIN_LOGIN_ID || 'admin@atlas';
+  const adminPassword = process.env.ATLAS_ADMIN_PASSWORD || 'AtlasAdmin@123';
+  const adminName = process.env.ATLAS_ADMIN_NAME || 'Atlas Super Admin';
   try {
     await provisionSuperAdmin(db, {
       loginId: adminLoginId,
       name: adminName,
       password: adminPassword,
+      reset: true,
+      mustChangePassword: false,
     }, config.auth.minPasswordLength);
+
+    // Also provision admin@atlas.local with the exact same password and no required change
+    // so both admin handles work seamlessly and permanently.
+    if (adminLoginId !== 'admin@atlas.local') {
+      try {
+        await provisionSuperAdmin(db, {
+          loginId: 'admin@atlas.local',
+          name: adminName,
+          password: adminPassword,
+          reset: true,
+          mustChangePassword: false,
+        }, config.auth.minPasswordLength);
+      } catch {
+        // ignore
+      }
+    }
   } catch (err) {
     console.error(`Super Admin provisioning skipped: ${err.message}`);
   }

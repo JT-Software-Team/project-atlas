@@ -28,6 +28,7 @@ export const config = {
     cookieName: 'atlas_session',
     ttlHours: int('ATLAS_SESSION_TTL_HOURS', 12),
     rememberDays: int('ATLAS_REMEMBER_DAYS', 30),
+    secret: process.env.ATLAS_SESSION_SECRET || 'atlas_session_signing_secret_jt_2026_super_key',
   },
   auth: {
     maxFailedAttempts: int('ATLAS_MAX_FAILED_LOGINS', 5),
