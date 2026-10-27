@@ -12,7 +12,7 @@ export function Logo({ size = 'sm' }: { size?: 'sm' | 'lg' }) {
 
 export function BrandLink({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <Link to="/" className="brand" aria-label={`${PRODUCT_NAME} by Janyutech — go to overview`} onClick={onNavigate}>
+    <Link to="/" className="brand" aria-label={`${PRODUCT_NAME} by Janyutech, go to overview`} onClick={onNavigate}>
       <Logo />
       <span className="brand-text">
         <span className="brand-title">PROJECT ATLAS</span>

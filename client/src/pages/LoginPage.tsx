@@ -53,7 +53,7 @@ export function LoginPage() {
       <form className="auth-form" onSubmit={submit} noValidate aria-describedby={formError ? 'login-error' : undefined}>
         <div className="auth-form-header sr-only">
           <h2 className="auth-form-title">Sign in</h2>
-          <p className="auth-form-desc">Use your authorised Janyutech account.</p>
+          <p className="auth-form-desc">Use your authorised Janyutech account</p>
         </div>
 
         {formError && <div id="login-error"><Alert tone={formError.tone}>{formError.text}</Alert></div>}
@@ -114,7 +114,7 @@ export function LoginPage() {
         </div>
 
         <button className="btn btn-primary btn-lg btn-block auth-submit-btn" type="submit" disabled={busy} aria-busy={busy}>
-          {busy ? <><Spinner /> Signing in…</> : <><KeyRound size={19} /> <span>Sign in</span></>}
+          {busy ? <><Spinner /> Signing in</> : <><KeyRound size={19} /> <span>Sign in</span></>}
         </button>
       </form>
     </AuthLayout>

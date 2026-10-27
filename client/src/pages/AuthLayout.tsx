@@ -5,7 +5,7 @@ import { SUBTITLE, TAGLINE } from '../lib/brand';
 
 const FEATURES = [
   { icon: LayoutGrid, title: 'Central Directory', text: 'All projects and dashboards', tone: 'violet' },
-  { icon: ShieldCheck, title: 'Role-Based Access', text: 'Per-project permissions', tone: 'cyan' },
+  { icon: ShieldCheck, title: 'Role Based Access', text: 'Per-project permissions', tone: 'cyan' },
   { icon: Activity, title: 'Full Audit Trail', text: 'Every change recorded', tone: 'violet' },
 ] as const;
 
@@ -194,10 +194,10 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <div className="auth-visual-content">
           <p className="auth-eyebrow reveal" style={{ '--d': '0.05s' } as CSSProperties}>Janyutech Enterprise Portal</p>
           <h2 className="auth-hero-heading reveal" style={{ '--d': '0.15s' } as CSSProperties}>
-            Every client project and monitoring dashboard, <span className="text-gradient">in one secure place.</span>
+            Every client project and monitoring dashboard <span className="text-gradient">in one secure place</span>
           </h2>
           <p className="auth-hero-desc reveal" style={{ '--d': '0.28s' } as CSSProperties}>
-            Project Atlas brings Janyutech's industrial automation and monitoring projects together for authorised employees and approved client users.
+            Project Atlas brings Janyutech's industrial automation and monitoring projects together for authorised employees and approved client users
           </p>
         </div>
 
@@ -235,9 +235,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 
           <footer className="auth-foot">
             <span className="auth-secure">
-              <Lock size={15} aria-hidden="true" /> Authorised personnel only. Access is logged.
+              <Lock size={15} aria-hidden="true" /> Authorised personnel only, access is logged
             </span>
-            <span>© {new Date().getFullYear()} Janyutech. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} Janyutech, all rights reserved</span>
           </footer>
         </div>
       </main>
