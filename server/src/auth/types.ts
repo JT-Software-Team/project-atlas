@@ -1,5 +1,5 @@
-export type Role = 'super_admin' | 'project_admin' | 'viewer';
-export const ROLES: Role[] = ['super_admin', 'project_admin', 'viewer'];
+export type Role = 'super_admin' | 'admin' | 'project_admin' | 'viewer';
+export const ROLES: Role[] = ['super_admin', 'admin', 'project_admin', 'viewer'];
 
 export interface SessionUser {
   id: number;

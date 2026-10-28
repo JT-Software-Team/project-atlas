@@ -89,7 +89,7 @@ export function clientRoutes(db: DB) {
     'SELECT id, name FROM clients WHERE lower(trim(name)) = lower(trim(?)) AND id IS NOT ?',
   ).get(name, exceptId ?? null) as { id: number; name: string } | undefined;
 
-  r.post('/', requireRole('super_admin', 'project_admin'), ah(async (req, res) => {
+  r.post('/', requireRole('super_admin'), ah(async (req, res) => {
     const input = clientInput.parse(req.body);
     const dup = await duplicateOf(input.name);
     if (dup) throw new HttpError(409, `A client named “${dup.name}” already exists.`, { existingId: dup.id, field: 'name' });
@@ -107,7 +107,7 @@ export function clientRoutes(db: DB) {
     res.status(201).json({ client: serialize(await db.prepare(`${CLIENT_SELECT} WHERE c.id = ?`).get(id) as unknown as ClientRow, 0, true) });
   }));
 
-  r.put('/:id', requireRole('super_admin', 'project_admin'), ah(async (req, res) => {
+  r.put('/:id', requireRole('super_admin'), ah(async (req, res) => {
     const id = Number(req.params.id);
     const prev = await db.prepare('SELECT * FROM clients WHERE id = ?').get(id) as ClientRow | undefined;
     if (!prev) throw new HttpError(404, 'Client not found.');

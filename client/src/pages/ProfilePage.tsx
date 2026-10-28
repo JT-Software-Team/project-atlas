@@ -11,12 +11,25 @@ import { Alert, Field, PageHeader, Spinner } from '../components/ui';
 interface Session { current: boolean; createdAt: string; lastSeenAt: string; expiresAt: string; remember: boolean; ip: string | null; userAgent: string | null }
 
 export function ProfilePage() {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const toast = useToast();
   const sessions = useApi<{ sessions: Session[] }>('/auth/sessions');
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirm: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
+
+  const sendVerification = async () => {
+    setSendingVerification(true);
+    try {
+      const res = await api.post<{ message: string }>('/auth/recovery-email/request-verification');
+      toast(res.message);
+    } catch (err) {
+      toast((err as ApiError).message, 'error');
+    } finally {
+      setSendingVerification(false);
+    }
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,7 +87,35 @@ export function ProfilePage() {
           <div className="panel-header"><h2><UserCircle size={18} />Your account</h2></div>
           <dl className="kv">
             <dt>Name</dt><dd>{user!.name}</dd>
-            <dt>Email</dt><dd>{user!.email}</dd>
+            <dt>Email / Login ID</dt><dd>{user!.email}</dd>
+            {user!.recoveryEmail && (
+              <>
+                <dt>Recovery email</dt>
+                <dd>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span>{user!.recoveryEmail}</span>
+                    {user!.recoveryEmailVerified ? (
+                      <span className="badge badge-success">Verified</span>
+                    ) : (
+                      <>
+                        <span className="badge badge-warning">Unverified</span>
+                        {isSuperAdmin && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-ghost"
+                            disabled={sendingVerification}
+                            onClick={sendVerification}
+                            style={{ padding: '2px 8px', height: 'auto', fontSize: '0.8rem' }}
+                          >
+                            {sendingVerification ? 'Sending…' : 'Verify email'}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </dd>
+              </>
+            )}
             <dt>Role</dt><dd>{ROLE_LABELS[user!.role]}<div className="subtle">{ROLE_DESCRIPTIONS[user!.role]}</div></dd>
             {user!.clientName && <><dt>Organisation</dt><dd>{user!.clientName}</dd></>}
             <dt>Last sign-in</dt><dd>{formatDateTime(user!.lastLoginAt)}</dd>

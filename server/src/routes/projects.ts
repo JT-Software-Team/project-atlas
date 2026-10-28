@@ -263,8 +263,15 @@ export function dashboardRoutes(db: DB) {
   // Launch through the server so access is re-checked and the open is recorded.
   r.get('/:id/open', ah(async (req, res) => {
     const d = await load(parseId(req.params.id));
-    if (!d || !(await projectAccessById(db, req.user!, d.project_id)).view) {
+    if (!d) {
       throw new HttpError(404, 'This dashboard does not exist or you do not have access to it.');
+    }
+    const access = await projectAccessById(db, req.user!, d.project_id);
+    if (!access.view) {
+      throw new HttpError(404, 'This dashboard does not exist or you do not have access to it.');
+    }
+    if (!access.dashboard) {
+      throw new HttpError(403, 'Your account role (Viewer) does not have permission to access dashboards. Dashboard access is restricted to Admin and Super Admin accounts.');
     }
     if (dashboardUrlProblem(d.url)) throw new HttpError(422, 'This dashboard link is not valid. Ask an administrator to update it.');
     await db.prepare(`INSERT INTO recent_access (user_id, project_id, accessed_at) VALUES (?, ?, ?)

@@ -115,7 +115,7 @@ export function toCard({ row, access }: ProjectWithAccess) {
     coverUrl: mediaUrl(row.cover_media_id, true, row.cover_stored),
     dashboardCount: row.dashboard_count,
     primaryDashboard: row.primary_dashboard_id
-      ? { id: row.primary_dashboard_id, openIn: row.primary_dashboard_open_in, launchUrl: `/api/dashboards/${row.primary_dashboard_id}/open` }
+      ? { id: row.primary_dashboard_id, openIn: row.primary_dashboard_open_in, launchUrl: access.dashboard ? `/api/dashboards/${row.primary_dashboard_id}/open` : undefined }
       : null,
     isFavorite: !!row.is_favorite,
     lastAccessedAt: row.last_accessed_at,
@@ -123,7 +123,7 @@ export function toCard({ row, access }: ProjectWithAccess) {
     updatedAt: row.updated_at,
     archived: !!row.archived_at,
     visibility: access.manage ? row.visibility : undefined,
-    access: { technical: access.technical, manage: access.manage },
+    access: { technical: access.technical, manage: access.manage, dashboard: access.dashboard },
   };
 }
 
@@ -134,7 +134,7 @@ interface DashboardRow {
   verified_by_name: string | null; thumb_stored: string | null;
 }
 
-export async function projectDashboards(db: DB, projectId: number, includeUrl: boolean) {
+export async function projectDashboards(db: DB, projectId: number, includeUrl: boolean, canLaunch = true) {
   const rows = await db.prepare(
     `SELECT d.*, u.name AS verified_by_name, ${storedNameOf('d.thumbnail_media_id')} AS thumb_stored FROM dashboards d LEFT JOIN users u ON u.id = d.last_verified_by
      WHERE d.project_id = ? ORDER BY d.sort_order, d.id`,
@@ -152,7 +152,7 @@ export async function projectDashboards(db: DB, projectId: number, includeUrl: b
       provider: d.provider,
       host,
       url: includeUrl ? d.url : undefined,
-      launchUrl: `/api/dashboards/${d.id}/open`,
+      launchUrl: canLaunch ? `/api/dashboards/${d.id}/open` : undefined,
       requiresSeparateLogin: !!d.requires_separate_login,
       thumbnailUrl: mediaUrl(d.thumbnail_media_id, true, d.thumb_stored),
       thumbnailMediaId: includeUrl ? d.thumbnail_media_id : undefined,
@@ -202,7 +202,7 @@ export async function toDetail(db: DB, pa: ProjectWithAccess) {
         logoUrl: mediaUrl(row.client_logo, false, row.client_logo_stored), industry: row.client_industry, website: row.client_website,
       }
       : null,
-    dashboards: await projectDashboards(db, row.id, access.manage),
+    dashboards: await projectDashboards(db, row.id, access.manage, access.dashboard),
     media: {
       cover: await mediaInfo(db, row.cover_media_id),
       plant: await mediaInfo(db, row.plant_media_id),

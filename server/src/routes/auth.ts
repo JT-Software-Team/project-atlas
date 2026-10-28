@@ -25,11 +25,25 @@ export async function issuePasswordToken(db: DB, userId: number, purpose: 'reset
 
 export const passwordLink = (token: string) => `${config.appUrl}/reset-password#token=${token}`;
 
+/** Issue a single-use token to verify a recovery email. */
+export async function issueEmailVerificationToken(db: DB, userId: number, email: string): Promise<string> {
+  const token = randomToken();
+  const ttl = 24 * 3600_000; // 24 hours
+  await db.prepare('UPDATE email_verification_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL').run(nowIso(), userId);
+  await db.prepare('INSERT INTO email_verification_tokens (token_hash, user_id, email, created_at, expires_at) VALUES (?, ?, ?, ?, ?)')
+    .run(sha256(token), userId, email, nowIso(), new Date(Date.now() + ttl).toISOString());
+  return token;
+}
+
+export const recoveryVerificationLink = (token: string) => `${config.appUrl}/verify-recovery-email#token=${token}`;
+
 export function authRoutes(db: DB, mailer: Mailer) {
   const r = Router();
   const loginByIp = new RateLimiter(20, 15 * 60_000);
   const forgotByIp = new RateLimiter(5, 15 * 60_000);
   const resetByIp = new RateLimiter(10, 15 * 60_000);
+  const requestVerificationByIp = new RateLimiter(5, 15 * 60_000);
+  const verifyRecoveryByIp = new RateLimiter(10, 15 * 60_000);
 
   r.post('/login', ah(async (req, res) => {
     const wait = loginByIp.hit(req.ip ?? 'unknown');
@@ -86,7 +100,8 @@ export function authRoutes(db: DB, mailer: Mailer) {
 
   r.get('/me', requireAuth, ah(async (req, res) => {
     const u = await db.prepare(
-      `SELECT u.id, u.email, u.name, u.role, u.client_id, cl.name AS client_name, u.last_login_at, u.must_change_password
+      `SELECT u.id, u.email, u.name, u.role, u.client_id, cl.name AS client_name, u.last_login_at, u.must_change_password,
+              u.recovery_email, u.recovery_email_verified
          FROM users u LEFT JOIN clients cl ON cl.id = u.client_id WHERE u.id = ?`,
     ).get(req.user!.id) as Record<string, unknown>;
     res.json({
@@ -94,6 +109,8 @@ export function authRoutes(db: DB, mailer: Mailer) {
         id: u.id, email: u.email, name: u.name, role: u.role,
         clientId: u.client_id, clientName: u.client_name, lastLoginAt: u.last_login_at,
         mustChangePassword: !!u.must_change_password,
+        recoveryEmail: (u.recovery_email as string | null) ?? null,
+        recoveryEmailVerified: !!u.recovery_email_verified,
       },
     });
   }));
@@ -191,6 +208,85 @@ export function authRoutes(db: DB, mailer: Mailer) {
     await revokeUserSessions(db, req.user!.id, req.sessionTokenHash);
     await audit(db, req, { action: 'auth.sessions_revoked', summary: 'Signed out all other sessions', entityType: 'user', entityId: req.user!.id });
     res.json({ ok: true });
+  }));
+
+  r.post('/recovery-email/request-verification', requireAuth, ah(async (req, res) => {
+    if (requestVerificationByIp.hit(req.ip ?? 'unknown')) {
+      throw new HttpError(429, 'Too many verification requests. Please wait a few minutes.');
+    }
+    if (req.user!.role !== 'super_admin') {
+      throw new HttpError(403, 'Only a Super Admin can configure and verify a recovery email.');
+    }
+    const user = await db.prepare(
+      'SELECT id, name, recovery_email, recovery_email_verified, is_active FROM users WHERE id = ?',
+    ).get(req.user!.id) as { id: number; name: string; recovery_email: string | null; recovery_email_verified: number; is_active: number } | undefined;
+
+    if (!user || !user.is_active) {
+      throw new HttpError(403, 'Your account is inactive.');
+    }
+    if (!user.recovery_email) {
+      throw new HttpError(400, 'No recovery email address is configured for this account.');
+    }
+    if (user.recovery_email_verified) {
+      throw new HttpError(400, 'Your recovery email is already verified.');
+    }
+
+    const token = await issueEmailVerificationToken(db, user.id, user.recovery_email);
+    await mailer.send({
+      to: user.recovery_email,
+      subject: 'Verify your Project Atlas recovery email',
+      text: `Hello ${user.name},\n\nPlease verify that this email address is your recovery destination for Project Atlas.\nUse this link to complete verification (valid for 24 hours):\n\n${recoveryVerificationLink(token)}\n\nIf you did not request this, you can ignore this message.\n\n— Janyutech Project Atlas`,
+    });
+    await audit(db, req, {
+      action: 'auth.recovery_email_verification_requested',
+      summary: `Requested verification for recovery email ${user.recovery_email}`,
+      entityType: 'user',
+      entityId: user.id,
+    }, { id: user.id, name: user.name });
+
+    res.json({ ok: true, message: `Verification email has been sent to ${user.recovery_email}.` });
+  }));
+
+  const verificationTokenRow = async (token: string) => await db.prepare(
+    `SELECT t.token_hash, t.user_id, t.email, t.expires_at, t.used_at, u.name, u.recovery_email, u.is_active
+       FROM email_verification_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ?`,
+  ).get(sha256(token)) as
+    | { token_hash: string; user_id: number; email: string; expires_at: string; used_at: string | null; name: string; recovery_email: string | null; is_active: number }
+    | undefined;
+
+  const validVerificationToken = async (token: string) => {
+    const row = await verificationTokenRow(token);
+    if (!row || row.used_at || row.expires_at <= nowIso() || !row.is_active || row.recovery_email !== row.email) return null;
+    return row;
+  };
+
+  r.post('/recovery-email/check', ah(async (req, res) => {
+    if (verifyRecoveryByIp.hit(req.ip ?? 'unknown')) throw new HttpError(429, 'Too many requests. Please wait a few minutes.');
+    const { token } = z.object({ token: z.string().min(10).max(200) }).parse(req.body);
+    const row = await validVerificationToken(token);
+    if (!row) throw new HttpError(400, 'This verification link is invalid or has expired. Please request a new one.');
+    res.json({ ok: true, email: row.email, name: row.name });
+  }));
+
+  r.post('/recovery-email/verify', ah(async (req, res) => {
+    if (verifyRecoveryByIp.hit(req.ip ?? 'unknown')) throw new HttpError(429, 'Too many requests. Please wait a few minutes.');
+    const { token } = z.object({ token: z.string().min(10).max(200) }).parse(req.body);
+    const row = await validVerificationToken(token);
+    if (!row) throw new HttpError(400, 'This verification link is invalid or has expired. Please request a new one.');
+
+    await transaction(db, async () => {
+      await db.prepare('UPDATE email_verification_tokens SET used_at = ? WHERE token_hash = ?').run(nowIso(), row.token_hash);
+      await db.prepare('UPDATE users SET recovery_email_verified = 1, updated_at = ? WHERE id = ?').run(nowIso(), row.user_id);
+    });
+
+    await audit(db, req, {
+      action: 'auth.recovery_email_verified',
+      summary: `Verified recovery email ${row.email}`,
+      entityType: 'user',
+      entityId: row.user_id,
+    }, { id: row.user_id, name: row.name });
+
+    res.json({ ok: true, message: 'Recovery email verified successfully.' });
   }));
 
   return r;

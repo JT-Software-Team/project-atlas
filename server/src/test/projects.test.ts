@@ -37,6 +37,8 @@ describe('projects and permissions', () => {
     expect(detail.status).toBe(200);
     expect(detail.body.project.technical).toBeNull();
     expect(detail.body.project.dashboards[0].url).toBeUndefined();
+    expect(detail.body.project.dashboards[0].launchUrl).toBeUndefined();
+    expect(detail.body.project.access.dashboard).toBe(false);
     expect(detail.body.project.admin).toBeNull();
     // Technical search terms do not match for users without technical access.
     expect((await viewer.get('/api/projects?q=secret')).body.total).toBe(0);
@@ -84,7 +86,7 @@ describe('projects and permissions', () => {
   });
 
   it('opens dashboards through an access-checked redirect and records it', async () => {
-    const { app, db } = await setup();
+    const { app, db, ids } = await setup();
     const admin = await login(app, 'admin@test.local');
     const created = await admin.post('/api/projects').send(validProject);
     const dash = created.body.project.dashboards[0];
@@ -94,7 +96,26 @@ describe('projects and permissions', () => {
     expect(await db.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'dashboard.opened'`).get()).toEqual({ n: 1 });
 
     const viewer = await login(app, 'viewer@test.local');
+    // Viewer without access to this restricted project gets 404
     expect((await viewer.get(dash.launchUrl)).status).toBe(404);
+
+    // Grant viewer access to the project
+    await admin.put(`/api/projects/${created.body.project.id}/access`).send({ grants: [{ userId: ids.viewer, level: 'view' }] });
+    // Viewer can view the project, but launchUrl is undefined and attempting to open dashboard returns 403 Forbidden
+    const viewerProject = await viewer.get(`/api/projects/${created.body.project.id}`);
+    expect(viewerProject.status).toBe(200);
+    expect(viewerProject.body.project.access.dashboard).toBe(false);
+    expect(viewerProject.body.project.dashboards[0].launchUrl).toBeUndefined();
+    expect((await viewer.get(dash.launchUrl)).status).toBe(403);
+
+    // Admin role user CAN launch dashboard
+    const adminRoleUser = await login(app, 'admin_role@test.local');
+    await admin.put(`/api/projects/${created.body.project.id}/access`).send({ grants: [{ userId: ids.adminRole, level: 'view' }] });
+    const adminRoleProject = await adminRoleUser.get(`/api/projects/${created.body.project.id}`);
+    expect(adminRoleProject.body.project.access.dashboard).toBe(true);
+    expect(adminRoleProject.body.project.dashboards[0].launchUrl).toBe(dash.launchUrl);
+    const adminRoleLaunch = await adminRoleUser.get(dash.launchUrl);
+    expect(adminRoleLaunch.status).toBe(302);
   });
 
   it('requires explicit confirmation before a project becomes public', async () => {

@@ -38,4 +38,17 @@ describe('ProjectCard', () => {
     renderCard({ ...base, isFavorite: true });
     expect(screen.getByRole('button', { name: /Remove Gunny Ball Project from favorites/ })).toHaveAttribute('aria-pressed', 'true');
   });
+
+  it('renders disabled restricted button when viewer role has no dashboard access', () => {
+    renderCard({
+      ...base,
+      dashboardCount: 1,
+      primaryDashboard: { id: 7, openIn: 'new_tab', launchUrl: undefined },
+      access: { technical: false, manage: false, dashboard: false },
+    });
+    const btn = screen.getByRole('button', { name: /Dashboard Restricted/i });
+    expect(btn).toBeInTheDocument();
+    expect(btn).toBeDisabled();
+    expect(screen.queryByRole('link', { name: /Open dashboard/i })).not.toBeInTheDocument();
+  });
 });

@@ -6,8 +6,14 @@ import { ApiError } from '../lib/api';
 import { Alert, Field, Spinner } from '../components/ui';
 import { AuthLayout } from './AuthLayout';
 
-/** Mirrors the server: an email address, or a provisioned `name@realm` user ID. */
-const LOGIN_ID = /^(?:[^@\s]+@[^@\s]+\.[^@\s]+|[a-z0-9][a-z0-9._-]{0,63}@[a-z0-9][a-z0-9-]{0,62})$/i;
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const HANDLE = /^[a-z0-9][a-z0-9._-]{0,63}@[a-z0-9][a-z0-9-]{0,62}$/i;
+const USERNAME = /^[a-z0-9][a-z0-9._-]{0,63}$/i;
+
+const isLoginId = (val: string) => {
+  const v = val.trim();
+  return v.length >= 1 && v.length <= 254 && (EMAIL.test(v) || HANDLE.test(v) || USERNAME.test(v));
+};
 
 export function LoginPage() {
   const { login, status } = useAuth();
@@ -28,7 +34,7 @@ export function LoginPage() {
     e.preventDefault();
     const next: typeof errors = {};
     if (!email.trim()) next.email = 'Enter your email address or user ID.';
-    else if (!LOGIN_ID.test(email.trim())) next.email = 'Enter a valid email address or user ID.';
+    else if (!isLoginId(email)) next.email = 'Enter a valid email address or user ID.';
     if (!password) next.password = 'Enter your password.';
     setErrors(next);
     setFormError(null);

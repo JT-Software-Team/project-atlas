@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Clock, ExternalLink, LayoutDashboard, MapPin, Star, Tag } from 'lucide-react';
+import { Clock, ExternalLink, LayoutDashboard, Lock, MapPin, Star, Tag } from 'lucide-react';
 import type { ProjectCard as Card } from '../lib/types';
 import { locationText, timeAgo } from '../lib/format';
 import { ClientLogo, CoverImage } from './Media';
@@ -55,7 +55,7 @@ export function ProjectCard({ project: p, onToggleFavorite, preview }: Props) {
         ) : (
           <Link className="btn btn-sm" to={`/projects/${p.slug}`}>View Details</Link>
         )}
-        {p.primaryDashboard && !preview ? (
+        {p.access?.dashboard !== false && p.primaryDashboard && !preview ? (
           <a
             className="btn btn-sm btn-primary"
             href={p.primaryDashboard.launchUrl}
@@ -65,8 +65,19 @@ export function ProjectCard({ project: p, onToggleFavorite, preview }: Props) {
           >
             Open Dashboard <ExternalLink size={14} aria-hidden="true" />
           </a>
-        ) : p.primaryDashboard && preview ? (
+        ) : p.access?.dashboard !== false && p.primaryDashboard && preview ? (
           <span className="btn btn-sm btn-primary" aria-disabled="true">Open Dashboard</span>
+        ) : p.access?.dashboard === false && (p.primaryDashboard || p.dashboardCount > 0) ? (
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled
+            aria-disabled="true"
+            title="Dashboard access is restricted for Viewer accounts"
+            style={{ opacity: 0.65, cursor: 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+          >
+            <Lock size={13} aria-hidden="true" /> Dashboard Restricted
+          </button>
         ) : (
           <span className="no-dash" title="No dashboard link has been configured for this project yet">No dashboard link yet</span>
         )}

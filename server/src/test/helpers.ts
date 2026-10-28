@@ -18,6 +18,7 @@ export async function setup() {
   ).run(email, name, role, hash, nowIso(), nowIso())).lastInsertRowid);
   const ids = {
     admin: await mk('admin@test.local', 'Ada Admin', 'super_admin'),
+    adminRole: await mk('admin_role@test.local', 'Alan Admin', 'admin'),
     pa: await mk('pa@test.local', 'Paul ProjectAdmin', 'project_admin'),
     viewer: await mk('viewer@test.local', 'Vera Viewer', 'viewer'),
   };

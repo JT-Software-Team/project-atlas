@@ -30,7 +30,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
     section: 'Administration',
     items: [
       { to: '/admin/projects', label: 'Project Management', icon: Wrench, roles: ['super_admin', 'project_admin'] },
-      { to: '/admin/users', label: 'User Management', icon: Users, roles: ['super_admin', 'project_admin'] },
+      { to: '/admin/users', label: 'User Management', icon: Users, roles: ['super_admin'] },
       { to: '/admin/settings', label: 'Settings', icon: Settings, roles: ['super_admin'] },
     ],
   },

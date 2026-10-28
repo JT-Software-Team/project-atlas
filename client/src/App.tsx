@@ -15,6 +15,7 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { ResourcesPage } from './pages/ResourcesPage';
+import { VerifyRecoveryEmailPage } from './pages/VerifyRecoveryEmailPage';
 import { ProjectAdminPage } from './pages/admin/ProjectAdminPage';
 import { ProjectFormPage } from './pages/admin/ProjectFormPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
@@ -32,6 +33,7 @@ export function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/change-password" element={<ChangePasswordPage />} />
+            <Route path="/verify-recovery-email" element={<VerifyRecoveryEmailPage />} />
             <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
               <Route index element={<OverviewPage />} />
               <Route path="projects" element={<ProjectsPage />} />
@@ -46,7 +48,7 @@ export function App() {
               <Route path="admin/projects" element={<RequireRole roles={['super_admin', 'project_admin']}><ProjectAdminPage /></RequireRole>} />
               <Route path="admin/projects/new" element={<RequireRole roles={['super_admin']}><ProjectFormPage /></RequireRole>} />
               <Route path="admin/projects/:id/edit" element={<RequireRole roles={['super_admin', 'project_admin']}><ProjectFormPage /></RequireRole>} />
-              <Route path="admin/users" element={<RequireRole roles={['super_admin', 'project_admin']}><UsersPage /></RequireRole>} />
+              <Route path="admin/users" element={<RequireRole roles={['super_admin']}><UsersPage /></RequireRole>} />
               <Route path="admin/settings" element={<RequireRole roles={['super_admin']}><SettingsPage /></RequireRole>} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>

@@ -217,4 +217,44 @@ export const migrations: string[] = [
     data BLOB NOT NULL
   );
   `,
+  /* 4 — recovery email address and verification status */ `
+  ALTER TABLE users ADD COLUMN recovery_email TEXT;
+  ALTER TABLE users ADD COLUMN recovery_email_verified INTEGER NOT NULL DEFAULT 0;
+  `,
+  /* 5 — single-use tokens for recovery email verification */ `
+  CREATE TABLE email_verification_tokens (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used_at TEXT
+  );
+  CREATE INDEX email_verification_user ON email_verification_tokens(user_id);
+  `,
+  /* 6 — support admin role in users check constraint */ `
+  PRAGMA foreign_keys = OFF;
+  CREATE TABLE users_new (
+    id INTEGER PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('super_admin','admin','project_admin','viewer')),
+    password_hash TEXT,
+    client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    failed_attempts INTEGER NOT NULL DEFAULT 0,
+    locked_until TEXT,
+    last_login_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    must_change_password INTEGER NOT NULL DEFAULT 0,
+    recovery_email TEXT,
+    recovery_email_verified INTEGER NOT NULL DEFAULT 0
+  );
+  INSERT INTO users_new (id, email, name, role, password_hash, client_id, is_active, failed_attempts, locked_until, last_login_at, created_at, updated_at, must_change_password, recovery_email, recovery_email_verified)
+    SELECT id, email, name, role, password_hash, client_id, is_active, failed_attempts, locked_until, last_login_at, created_at, updated_at, must_change_password, recovery_email, recovery_email_verified FROM users;
+  DROP TABLE users;
+  ALTER TABLE users_new RENAME TO users;
+  PRAGMA foreign_keys = ON;
+  `,
 ];

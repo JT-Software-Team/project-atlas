@@ -18,7 +18,7 @@ export function mediaRoutes(db: DB) {
     limits: { fileSize: Math.max(config.uploads.maxImageBytes, config.uploads.maxDocumentBytes), files: 1, fields: 5 },
   });
 
-  r.post('/', requireRole('super_admin', 'project_admin'), upload.single('file'), ah(async (req, res) => {
+  r.post('/', requireRole('super_admin'), upload.single('file'), ah(async (req, res) => {
     if (!req.file) throw new HttpError(400, 'Choose a file to upload.');
     const { kind } = z.object({ kind: z.enum(['image', 'document']) }).parse(req.body);
     const stored = await storeUpload(req.file.buffer, kind);

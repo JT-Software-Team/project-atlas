@@ -1,6 +1,6 @@
 import type { Media } from './api';
 
-export type Role = 'super_admin' | 'project_admin' | 'viewer';
+export type Role = 'super_admin' | 'admin' | 'project_admin' | 'viewer';
 export type ProjectStatus = 'planning' | 'active' | 'completed' | 'on_hold' | 'under_maintenance' | 'archived';
 export type Visibility = 'private' | 'restricted' | 'public_overview';
 export type AccessLevel = 'view' | 'technical' | 'manage';
@@ -15,6 +15,8 @@ export interface User {
   lastLoginAt: string | null;
   /** Set on provisioned accounts until the initial password is replaced. */
   mustChangePassword?: boolean;
+  recoveryEmail?: string | null;
+  recoveryEmailVerified?: boolean;
 }
 
 export interface Location { siteName: string | null; city: string | null; state: string | null; country: string | null }
@@ -34,14 +36,14 @@ export interface ProjectCard {
   location: Location | null;
   coverUrl: string | null;
   dashboardCount: number;
-  primaryDashboard: { id: number; openIn: 'new_tab' | 'same_tab'; launchUrl: string } | null;
+  primaryDashboard: { id: number; openIn: 'new_tab' | 'same_tab'; launchUrl?: string } | null;
   isFavorite: boolean;
   lastAccessedAt: string | null;
   createdAt: string;
   updatedAt: string;
   archived: boolean;
   visibility?: Visibility;
-  access: { technical: boolean; manage: boolean };
+  access: { technical: boolean; manage: boolean; dashboard?: boolean };
 }
 
 export interface Dashboard {
@@ -54,7 +56,7 @@ export interface Dashboard {
   provider: string | null;
   host: string | null;
   url?: string;
-  launchUrl: string;
+  launchUrl?: string;
   requiresSeparateLogin: boolean;
   thumbnailUrl: string | null;
   thumbnailMediaId?: number | null;

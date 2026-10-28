@@ -14,7 +14,7 @@ import { ClientLogo, CoverImage } from '../components/Media';
 import { DemoBadge, ErrorState, Modal, StateMessage, StatusBadge } from '../components/ui';
 import { ActivityList } from './OverviewPage';
 
-export function DashboardRow({ d }: { d: Dashboard }) {
+export function DashboardRow({ d, canOpen = true }: { d: Dashboard; canOpen?: boolean }) {
   const newTab = d.openIn === 'new_tab';
   return (
     <div className={`dash-item ${d.isPrimary ? 'primary' : ''}`}>
@@ -32,10 +32,23 @@ export function DashboardRow({ d }: { d: Dashboard }) {
           <span><Clock size={13} aria-hidden="true" />{d.lastVerifiedAt ? `Link checked ${timeAgo(d.lastVerifiedAt)}` : 'Link not yet verified'}</span>
         </div>
       </div>
-      <a className="btn btn-primary btn-sm" href={d.launchUrl} target={newTab ? '_blank' : undefined} rel="noopener noreferrer"
-        aria-label={`Open ${d.name} (external site${newTab ? ', opens in a new tab' : ''})`}>
-        Open Dashboard <ExternalLink size={14} aria-hidden="true" />
-      </a>
+      {canOpen && d.launchUrl ? (
+        <a className="btn btn-primary btn-sm" href={d.launchUrl} target={newTab ? '_blank' : undefined} rel="noopener noreferrer"
+          aria-label={`Open ${d.name} (external site${newTab ? ', opens in a new tab' : ''})`}>
+          Open Dashboard <ExternalLink size={14} aria-hidden="true" />
+        </a>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-sm"
+          disabled
+          aria-disabled="true"
+          title="Dashboard access is restricted for Viewer accounts"
+          style={{ opacity: 0.65, cursor: 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+        >
+          <Lock size={13} aria-hidden="true" /> Restricted
+        </button>
+      )}
     </div>
   );
 }
@@ -110,8 +123,15 @@ export function ProjectDetailPage() {
             <div className="panel-header"><h2 id="dash-h"><LayoutDashboard size={18} aria-hidden="true" />Dashboards</h2><span className="subtle">{p.dashboards.length} configured</span></div>
             {p.dashboards.length ? (
               <>
-                <div className="dash-list">{p.dashboards.map((d) => <DashboardRow key={d.id} d={d} />)}</div>
-                <p className="subtle" style={{ marginTop: 12 }}>Dashboards open on their own platforms. Project Atlas does not show live machine data, and a link check only confirms the web address responded.</p>
+                <div className="dash-list">{p.dashboards.map((d) => <DashboardRow key={d.id} d={d} canOpen={p.access.dashboard !== false} />)}</div>
+                {p.access.dashboard === false ? (
+                  <div className="alert alert-info" style={{ marginTop: 12 }}>
+                    <Lock size={16} />
+                    Your account has Viewer access. You can view all project specifications, details, and media, but live dashboard links are restricted to Admin and Super Admin accounts.
+                  </div>
+                ) : (
+                  <p className="subtle" style={{ marginTop: 12 }}>Dashboards open on their own platforms. Project Atlas does not show live machine data, and a link check only confirms the web address responded.</p>
+                )}
               </>
             ) : (
               <StateMessage icon={<LayoutDashboard size={26} />} title="No dashboard link configured" message={p.access.manage ? 'Add the dashboard URL when it is supplied.' : 'The dashboard for this project has not been added yet.'}

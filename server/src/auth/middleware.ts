@@ -50,3 +50,9 @@ export function requireRole(...roles: Role[]) {
     next();
   };
 }
+
+export function requireSuperAdmin(req: Request, _res: Response, next: NextFunction) {
+  if (!req.user) return next(new HttpError(401, 'Please sign in to continue.'));
+  if (req.user.role !== 'super_admin') return next(new HttpError(403, 'Only a Super Admin can perform this action.'));
+  next();
+}

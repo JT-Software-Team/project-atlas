@@ -8,10 +8,12 @@ export interface ProjectAccess {
   technical: boolean;
   /** Can edit the project, its dashboards, media and viewer access. */
   manage: boolean;
+  /** Can click and open/launch dashboards. */
+  dashboard: boolean;
 }
 
-export const NO_ACCESS: ProjectAccess = { view: false, technical: false, manage: false };
-const FULL: ProjectAccess = { view: true, technical: true, manage: true };
+export const NO_ACCESS: ProjectAccess = { view: false, technical: false, manage: false, dashboard: false };
+const FULL: ProjectAccess = { view: true, technical: true, manage: true, dashboard: true };
 
 export interface AccessFields {
   id: number;
@@ -48,13 +50,25 @@ export function accessFor(user: SessionUser, project: AccessFields, grants: Gran
   const canManage = user.role === 'project_admin' && (grant === 'manage' || project.owner_user_id === user.id);
   if (canManage) return FULL;
   if (project.archived_at) return NO_ACCESS;
-  if (grant === 'technical' || grant === 'manage') return { view: true, technical: true, manage: false };
-  if (grant === 'view') return { view: true, technical: false, manage: false };
+
+  const canLaunchDashboard = user.role !== 'viewer';
+
+  if (grant === 'technical' || grant === 'manage') {
+    return { view: true, technical: true, manage: false, dashboard: canLaunchDashboard };
+  }
+  if (grant === 'view') {
+    return { view: true, technical: false, manage: false, dashboard: canLaunchDashboard };
+  }
   if (project.visibility !== 'private') {
     const roles = safeJsonArray(project.authorized_roles);
-    if (roles.includes(user.role)) return { view: true, technical: false, manage: false };
+    if (roles.includes(user.role)) {
+      return { view: true, technical: false, manage: false, dashboard: canLaunchDashboard };
+    }
+    if (user.role === 'admin' && roles.includes('viewer')) {
+      return { view: true, technical: false, manage: false, dashboard: true };
+    }
     if (project.client_access && user.clientId && user.clientId === project.client_id) {
-      return { view: true, technical: false, manage: false };
+      return { view: true, technical: false, manage: false, dashboard: canLaunchDashboard };
     }
   }
   return NO_ACCESS;

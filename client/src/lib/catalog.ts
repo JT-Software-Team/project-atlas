@@ -2,14 +2,16 @@ import type { AccessLevel, ProjectStatus, Role, Visibility } from './types';
 
 export const ROLE_LABELS: Record<Role, string> = {
   super_admin: 'Super Admin',
+  admin: 'Admin',
   project_admin: 'Project Admin',
   viewer: 'Viewer',
 };
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   super_admin: 'Full access, user management, project management and settings.',
+  admin: 'Can view projects and click/open authorized dashboards (no edit privileges).',
   project_admin: 'Manages only the projects assigned to them.',
-  viewer: 'Views permitted projects and opens authorised dashboards.',
+  viewer: 'Can view projects, images and details, but dashboard links are restricted.',
 };
 
 export const STATUS_META: Record<ProjectStatus, { label: string; tone: 'success' | 'warning' | 'error' | 'info' | 'accent' | '' }> = {

@@ -468,7 +468,7 @@ export function ProjectFormPage() {
               <fieldset className="span-2" style={{ border: 0, padding: 0, margin: 0 }} disabled={form.visibility === 'private'}>
                 <legend className="field-label" style={{ marginBottom: 4 }}>Authorized roles {form.visibility === 'private' && <span className="subtle">(not used for private projects)</span>}</legend>
                 <div className="row" style={{ gap: 18 }}>
-                  {(['project_admin', 'viewer'] as Role[]).map((r) => (
+                  {(['admin', 'viewer', 'project_admin'] as Role[]).map((r) => (
                     <label key={r} className="check"><input type="checkbox" checked={form.authorizedRoles.includes(r)} onChange={(e) => set('authorizedRoles', e.target.checked ? [...form.authorizedRoles, r] : form.authorizedRoles.filter((x) => x !== r))} />All {ROLE_LABELS[r]}s</label>
                   ))}
                 </div>
