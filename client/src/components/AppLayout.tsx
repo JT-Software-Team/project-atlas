@@ -86,11 +86,11 @@ export function AppLayout() {
             const items = group.items.filter((i) => !i.roles || i.roles.includes(role));
             if (!items.length) return null;
             return (
-              <div key={group.section}>
+              <div key={group.section} className="nav-group">
                 <div className="nav-section">{group.section}</div>
                 {items.map((item) => (
                   <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} title={collapsed ? item.label : undefined}>
-                    <item.icon size={19} aria-hidden="true" />
+                    <item.icon size={18} aria-hidden="true" />
                     <span className="nav-label">{item.label}</span>
                   </NavLink>
                 ))}
@@ -99,8 +99,12 @@ export function AppLayout() {
           })}
         </nav>
         <div className="sidebar-foot">
+          <Link to="/profile" className="sidebar-user" title={collapsed ? `${user.name}, ${ROLE_LABELS[role]}` : undefined}>
+            <span className="avatar" aria-hidden="true">{initials(user.name)}</span>
+            <span className="sidebar-user-text"><strong>{user.name}</strong><span>{ROLE_LABELS[role]}</span></span>
+          </Link>
           <button className="nav-link desktop-only" style={{ width: '100%', border: 0, background: 'none', cursor: 'pointer' }} onClick={() => setCollapsed((c) => !c)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-            {collapsed ? <ChevronsRight size={19} /> : <ChevronsLeft size={19} />}
+            {collapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
             <span className="nav-label">Collapse sidebar</span>
           </button>
         </div>

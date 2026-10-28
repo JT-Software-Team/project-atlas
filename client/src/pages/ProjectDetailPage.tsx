@@ -97,7 +97,7 @@ export function ProjectDetailPage() {
           </div>
           <div className="row">
             <button className="btn" aria-pressed={p.isFavorite} onClick={() => toggleFavorite(p)}>
-              <Star size={16} fill={p.isFavorite ? '#fbbf24' : 'none'} color={p.isFavorite ? '#fbbf24' : 'currentColor'} />{p.isFavorite ? 'Favorited' : 'Favorite'}
+              <Star size={16} fill={p.isFavorite ? '#E0A43A' : 'none'} color={p.isFavorite ? '#E0A43A' : 'currentColor'} />{p.isFavorite ? 'Favorited' : 'Favorite'}
             </button>
             {p.access.manage && !p.archived && <Link to={`/admin/projects/${p.id}/edit`} className="btn"><Pencil size={16} />Edit</Link>}
           </div>

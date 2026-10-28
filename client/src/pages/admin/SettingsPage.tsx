@@ -128,7 +128,7 @@ function UsageTab() {
   if (loading || !data) return <div className="skeleton" style={{ height: 180 }} />;
   const { storage, records } = data;
   const pct = Math.min(100, Math.round((storage.bytes / storage.limitBytes) * 100));
-  const tone = pct >= 90 ? 'var(--error)' : pct >= 75 ? 'var(--warning)' : 'var(--cyan)';
+  const tone = pct >= 90 ? 'var(--error)' : pct >= 75 ? 'var(--warning)' : 'var(--accent)';
   return (
     <section className="panel">
       <div className="panel-header"><h2><HardDrive size={18} />Storage &amp; usage</h2></div>

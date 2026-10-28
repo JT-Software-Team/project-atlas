@@ -19,7 +19,7 @@ export function FullScreenLoader({ label = 'Loading Project Atlas…' }: { label
 export function StatusBadge({ status }: { status: ProjectStatus }) {
   const meta = STATUS_META[status] ?? { label: status, tone: '' };
   return (
-    <span className={`badge ${meta.tone ? `badge-${meta.tone}` : ''}`}>
+    <span className={`badge badge-status ${meta.tone ? `badge-${meta.tone}` : ''}`}>
       {meta.label}
     </span>
   );

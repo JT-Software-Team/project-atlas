@@ -8,7 +8,7 @@ import { useApi } from '../hooks/useApi';
 import type { Activity, ProjectCard } from '../lib/types';
 import { timeAgo } from '../lib/format';
 import { CoverImage } from '../components/Media';
-import { Alert, ErrorState, StateMessage, StatusBadge } from '../components/ui';
+import { Alert, ErrorState, PageHeader, StateMessage, StatusBadge } from '../components/ui';
 
 interface Overview {
   stats: {
@@ -58,22 +58,23 @@ export function OverviewPage() {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   const stats = data?.stats;
+  // Mint marks the headline figures, amber the ones that need attention, cyan recent change.
   const cards = [
-    { label: 'Total Projects', value: stats?.totalProjects, icon: FolderKanban, to: '/projects', color: 'var(--gradient)', fg: 'var(--accent-strong)' },
-    { label: 'Client Companies', value: stats?.totalClients, icon: Building2, to: '/clients', color: 'var(--cyan)', fg: 'var(--cyan)' },
-    { label: 'Active Projects', value: stats?.activeProjects, icon: PlayCircle, to: '/projects?status=active', color: 'var(--success)', fg: 'var(--success)' },
-    { label: 'Completed', value: stats?.completedProjects, icon: CheckCircle2, to: '/projects?status=completed', color: '#60a5fa', fg: '#60a5fa' },
-    { label: 'Under Maintenance', value: stats?.underMaintenance, icon: Wrench, to: '/projects?status=under_maintenance', color: 'var(--warning)', fg: 'var(--warning)' },
-    { label: 'Updated (30 days)', value: stats?.recentlyUpdated, icon: Clock, to: '/projects?sort=updated', color: 'var(--accent)', fg: 'var(--accent-strong)' },
+    { label: 'Total Projects', value: stats?.totalProjects, icon: FolderKanban, to: '/projects', fg: 'var(--accent)' },
+    { label: 'Client Companies', value: stats?.totalClients, icon: Building2, to: '/clients', fg: 'var(--text-2)' },
+    { label: 'Active Projects', value: stats?.activeProjects, icon: PlayCircle, to: '/projects?status=active', fg: 'var(--accent)' },
+    { label: 'Completed', value: stats?.completedProjects, icon: CheckCircle2, to: '/projects?status=completed', fg: 'var(--text-2)' },
+    { label: 'Under Maintenance', value: stats?.underMaintenance, icon: Wrench, to: '/projects?status=under_maintenance', fg: 'var(--warning)' },
+    { label: 'Updated (30 days)', value: stats?.recentlyUpdated, icon: Clock, to: '/projects?sort=updated', fg: 'var(--cyan)' },
   ];
 
   return (
     <>
-      <section className="hero-banner">
-        <div className="eyebrow">Overview</div>
-        <h1>{greeting}, {user!.name.split(' ')[0]}</h1>
-        <p>Your central view of Janyutech industrial projects and their monitoring dashboards. Figures below are counted from the project records you are authorised to see.</p>
-      </section>
+      <PageHeader
+        eyebrow="Overview"
+        title={`${greeting}, ${user!.name.split(' ')[0]}`}
+        description="Janyutech industrial projects and their monitoring dashboards. Figures count only the project records you are authorised to see."
+      />
 
       {error ? <ErrorState error={error} onRetry={reload} /> : (
         <>
@@ -87,7 +88,7 @@ export function OverviewPage() {
           )}
           <section className="stats" aria-label="Summary statistics" aria-busy={loading}>
             {cards.map((c) => (
-              <Link key={c.label} to={c.to} className="stat" style={{ '--stat-color': c.color, '--stat-fg': c.fg } as React.CSSProperties}>
+              <Link key={c.label} to={c.to} className="stat" style={{ '--stat-fg': c.fg } as React.CSSProperties}>
                 <div className="stat-top"><span>{c.label}</span><span className="stat-icon"><c.icon size={16} aria-hidden="true" /></span></div>
                 {loading && !data ? <div className="skeleton" style={{ height: 30, width: 60, marginTop: 8 }} /> : <div className="stat-value">{c.value ?? 0}</div>}
               </Link>

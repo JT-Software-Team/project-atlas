@@ -29,27 +29,26 @@ export class ErrorBoundary extends Component<Props, State> {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'var(--bg, #0B0B18)',
-          color: 'var(--text, #E8EBF2)',
+          background: 'var(--bg, #080D12)',
+          color: 'var(--text, #E7EEF5)',
           padding: 24,
           fontFamily: 'Inter, system-ui, sans-serif',
         }}>
           <div style={{
             maxWidth: 480,
             width: '100%',
-            background: 'var(--card, #121226)',
-            border: '1px solid var(--border-strong, rgba(255, 255, 255, 0.15))',
-            borderRadius: 16,
+            background: 'var(--card, #101820)',
+            border: '1px solid var(--border, #202B35)',
+            borderRadius: 10,
             padding: 32,
             textAlign: 'center',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
           }}>
             <div style={{
               width: 54,
               height: 54,
-              borderRadius: '50%',
-              background: 'rgba(239, 68, 68, 0.15)',
-              color: '#EF4444',
+              borderRadius: 8,
+              background: 'rgba(229, 83, 75, 0.1)',
+              color: 'var(--error, #E5534B)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -58,7 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <AlertTriangle size={28} />
             </div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 8 }}>Something went wrong</h2>
-            <p style={{ color: 'var(--text-2, #8E95A6)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.5 }}>
+            <p style={{ color: 'var(--text-2, #8B9AA9)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.5 }}>
               {this.state.error?.message || 'An unexpected rendering error occurred. Please refresh or try again.'}
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
@@ -70,10 +69,10 @@ export class ErrorBoundary extends Component<Props, State> {
                   alignItems: 'center',
                   gap: 8,
                   padding: '10px 20px',
-                  borderRadius: 10,
+                  borderRadius: 8,
                   border: 0,
-                  background: 'var(--accent, #6366F1)',
-                  color: '#fff',
+                  background: 'var(--accent, #20E3B2)',
+                  color: 'var(--accent-contrast, #03120D)',
                   fontWeight: 600,
                   fontSize: '0.9rem',
                   cursor: 'pointer',

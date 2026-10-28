@@ -13,9 +13,9 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
 };
 
 export const STATUS_META: Record<ProjectStatus, { label: string; tone: 'success' | 'warning' | 'error' | 'info' | 'accent' | '' }> = {
-  planning: { label: 'Planning', tone: 'accent' },
+  planning: { label: 'Planning', tone: 'info' },
   active: { label: 'Active', tone: 'success' },
-  completed: { label: 'Completed', tone: 'info' },
+  completed: { label: 'Completed', tone: '' },
   on_hold: { label: 'On Hold', tone: 'warning' },
   under_maintenance: { label: 'Under Maintenance', tone: 'warning' },
   archived: { label: 'Archived', tone: '' },

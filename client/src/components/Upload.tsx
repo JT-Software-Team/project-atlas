@@ -93,7 +93,7 @@ export function MediaUpload({ label, kind = 'image', value, onChange, hint, cont
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); void handle(e.dataTransfer.files[0]); }}
       >
-        {busy && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(11,11,24,0.6)', zIndex: 1 }}><Spinner /></div>}
+        {busy && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(8,13,18,0.65)', zIndex: 1 }}><Spinner /></div>}
         {kind === 'image' && shown && brokenSrc === shown ? (
           <div className="upload-empty" role="status"><ImagePlus size={24} aria-hidden="true" /><span>Preview unavailable. Replace the image or try again later.</span></div>
         ) : kind === 'image' && shown ? <img src={shown} alt={`${label} preview`} onError={() => setBrokenSrc(shown)} />
