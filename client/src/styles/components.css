@@ -39,9 +39,8 @@
 .badge-info { color: var(--cyan); background: var(--cyan-soft); border-color: rgba(34, 211, 238, 0.28); }
 .badge-accent { color: var(--accent-strong); background: var(--accent-soft); border-color: rgba(32, 227, 178, 0.28); }
 .badge-demo { color: #EBBE6E; background: rgba(224, 164, 58, 0.06); border: 1px dashed rgba(224, 164, 58, 0.5); }
-/* Status badges: a compact dot + label rather than a filled chip. */
+/* Status badges */
 .badge-status { background: transparent; border-color: var(--border); color: var(--text-2); }
-.badge-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
 .badge-status.badge-success { color: var(--accent-strong); border-color: rgba(32, 227, 178, 0.28); }
 .badge-status.badge-warning { color: #EBBE6E; border-color: rgba(224, 164, 58, 0.3); }
 .badge-status.badge-error { color: #F08A83; border-color: rgba(229, 83, 75, 0.32); }

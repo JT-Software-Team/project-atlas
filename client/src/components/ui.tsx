@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { AlertTriangle, CheckCircle2, FlaskConical, Info, X, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import { STATUS_META } from '../lib/catalog';
 import type { ProjectStatus } from '../lib/types';
 
@@ -28,7 +28,7 @@ export function StatusBadge({ status }: { status: ProjectStatus }) {
 export function DemoBadge({ compact }: { compact?: boolean }) {
   return (
     <span className="badge badge-demo" title="Sample data for demonstration. Replace via Project Management.">
-      <FlaskConical size={12} aria-hidden="true" /> {compact ? 'Demo' : 'Demo data'}
+      {compact ? 'Demo' : 'Demo data'}
     </span>
   );
 }
