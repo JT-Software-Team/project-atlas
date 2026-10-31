@@ -137,9 +137,13 @@
 .table tbody tr { transition: background 0.12s; }
 .table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
 .table .actions { display: flex; gap: 6px; justify-content: flex-end; }
+/* Row action menus must not be clipped by the table's scroll box: near the bottom of a longer table they
+   open upwards, and a short table makes room below while a menu is open. */
+.table tbody:has(> tr:nth-child(4)) > tr:nth-last-child(-n+2) .menu { top: auto; bottom: calc(100% + 6px); }
+.table-wrap:has(tbody > tr:last-child:nth-child(-n+3)):has(.menu) { padding-bottom: 160px; }
 
 /* ---------- Tabs / chips ---------- */
-.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; max-width: 100%; }
 .tab { position: relative; padding: 10px 14px; border: 0; background: transparent; color: var(--text-2); font-weight: 600; font-size: 0.84rem; cursor: pointer; white-space: nowrap; }
 .tab:hover { color: var(--text); }
 .tab[aria-selected='true'] { color: var(--text); }

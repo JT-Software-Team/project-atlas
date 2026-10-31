@@ -5,7 +5,7 @@ import { LOGO_ALT, LOGO_SRC, PRODUCT_NAME } from '../lib/brand';
 export function Logo({ size = 'sm' }: { size?: 'sm' | 'lg' }) {
   return (
     <span className={`logo-plate ${size}`}>
-      <img src={LOGO_SRC} alt={LOGO_ALT} width={666} height={176} />
+      <img src={LOGO_SRC} alt={LOGO_ALT} width={368} height={86} />
     </span>
   );
 }
