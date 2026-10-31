@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 import { LOGO_ALT, LOGO_SRC, PRODUCT_NAME } from '../lib/brand';
 
-/** The official Janyutech logo, unaltered, on a light plate for contrast against the dark UI. */
+/** The official Janyutech logo (transparent PNG), shown directly on the dark UI. */
 export function Logo({ size = 'sm' }: { size?: 'sm' | 'lg' }) {
   return (
     <span className={`logo-plate ${size}`}>
-      <img src={LOGO_SRC} alt={LOGO_ALT} width={368} height={86} />
+      <img src={LOGO_SRC} alt={LOGO_ALT} width={362} height={80} />
     </span>
   );
 }

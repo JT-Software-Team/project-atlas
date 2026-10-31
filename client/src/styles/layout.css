@@ -1,11 +1,11 @@
 /* ---------- Brand ---------- */
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); min-width: 0; }
 .brand:hover { text-decoration: none; }
-.logo-plate { display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 6px; padding: 6px 10px; flex: none; }
-/* The logo file is cropped tight to the artwork; 86% keeps a white margin around it inside the plate. */
-.logo-plate img { height: 86%; width: auto; object-fit: contain; }
-.logo-plate.sm { height: 30px; padding: 4px 7px; border-radius: 5px; }
-.logo-plate.lg { height: 60px; padding: 10px 16px; border-radius: 10px; }
+/* The logo is a transparent PNG cropped to the artwork, shown directly on the dark background. */
+.logo-plate { display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.logo-plate img { height: 100%; width: auto; object-fit: contain; }
+.logo-plate.sm { height: 19px; }
+.logo-plate.lg { height: 44px; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
 .brand-title { font-weight: 700; letter-spacing: 0.06em; font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand-sub { font-size: 0.66rem; color: var(--text-3); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -38,7 +38,7 @@
 .collapsed .sidebar { padding-inline: 8px; }
 .collapsed .sidebar-top { flex-direction: column; justify-content: center; padding-inline: 0; }
 /* The full wordmark is never cropped: in the narrow rail it scales down to the rail's width. */
-.collapsed .logo-plate.sm { width: 100%; height: auto; padding: 6px 5px; }
+.collapsed .logo-plate.sm { width: 100%; height: auto; }
 .collapsed .logo-plate.sm img { width: 100%; height: auto; }
 
 .main { min-width: 0; display: flex; flex-direction: column; }
@@ -68,8 +68,8 @@
   .collapsed .nav-link { justify-content: flex-start; padding: 0 12px; }
   .collapsed .sidebar-user { justify-content: flex-start; padding: 8px 8px 6px; }
   .collapsed .sidebar-top { flex-direction: row; justify-content: space-between; padding-inline: 4px; }
-  .collapsed .logo-plate.sm { width: auto; height: 30px; padding: 4px 7px; }
-  .collapsed .logo-plate.sm img { width: auto; height: 86%; }
+  .collapsed .logo-plate.sm { width: auto; height: 19px; }
+  .collapsed .logo-plate.sm img { width: auto; height: 100%; }
   .mobile-only { display: inline-flex; }
   .desktop-only { display: none !important; }
   .header { padding: 0 16px; }

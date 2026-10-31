@@ -4,7 +4,7 @@ Everything below is done in the browser by an administrator. No code changes are
 
 ## Replace the Janyutech logo
 
-The official logo lives at `client/public/brand/janyutech-logo.jpg` and is used unchanged on the login page and in the sidebar of every page. To update it, replace that file with the new version, keeping the same name, and rebuild (`npm run build`). A PNG or SVG works too; change `LOGO_SRC` in `client/src/lib/brand.ts` if the file name changes. The logo sits on a light "plate" so a logo with a white background remains legible on the dark theme; its aspect ratio is always preserved.
+The official logo lives at `client/public/brand/janyutech-logo.png` and is used on the login page and in the sidebar of every page. It is a transparent PNG cropped to the artwork and is shown directly on the dark theme, with no white background. To update it, replace that file with a new transparent PNG, keeping the same name, and rebuild (`npm run build`). An SVG works too; change `LOGO_SRC` in `client/src/lib/brand.ts` if the file name changes. Its aspect ratio is always preserved.
 
 ## Replace the demo projects with real data
 
