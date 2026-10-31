@@ -57,9 +57,9 @@ export function LoginPage() {
   return (
     <AuthLayout>
       <form className="auth-form" onSubmit={submit} noValidate aria-describedby={formError ? 'login-error' : undefined}>
-        <div className="auth-form-header sr-only">
-          <h2 className="auth-form-title">Sign in</h2>
-          <p className="auth-form-desc">Use your authorised Janyutech account</p>
+        <div className="auth-welcome">
+          <h2 className="auth-welcome-title">Welcome Back</h2>
+          <p className="auth-welcome-desc">Sign in to access Project Atlas</p>
         </div>
 
         {formError && <div id="login-error"><Alert tone={formError.tone}>{formError.text}</Alert></div>}

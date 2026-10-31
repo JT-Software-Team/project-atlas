@@ -6,4 +6,3 @@ export const LOGO_SRC = '/brand/janyutech-logo.png';
 export const LOGO_ALT = 'Janyutech';
 export const PRODUCT_NAME = 'Project Atlas';
 export const SUBTITLE = 'Industrial Intelligence & Monitoring Portal';
-export const TAGLINE = 'One Platform   Every Project   Complete Visibility';
